@@ -2,7 +2,7 @@
 #define _KERNEL_H 1
 
 #define KERNEL_MAJOR 0
-#define KERNEL_MINOR 0
+#define KERNEL_MINOR 1
 #define KERNEL_VERSION "waterfall"
 #define KERNEL_BRANCH "dev"
 

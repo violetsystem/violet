@@ -51,10 +51,12 @@ rwildcard = $(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(
 # Source Files
 C_SRC = $(SOURCE)/kernel.c # kernel starting point
 C_SRC += $(SOURCE)/boot/limine.c # bootprotocol specific
+C_SRC += $(call rwildcard,$(SOURCE)/boot/limine/amd64,*.c) # bootprotocol specific & arch specific
 C_SRC += $(call rwildcard,$(SOURCE)/arch/amd64,*.c) # arch specific
 C_SRC += $(call rwildcard,$(SOURCE)/lib,*.c) # library
 
-ASM_SRC = $(call rwildcard,$(SOURCE)/arch/amd64,*.s) # arch specific
+ASM_SRC = $(call rwildcard,$(SOURCE)/boot/limine/amd64,*.s) # bootprotocol specific & arch specific
+ASM_SRC += $(call rwildcard,$(SOURCE)/arch/amd64,*.s) # arch specific
 
 OBJS = $(patsubst $(SOURCE)/%.c,$(LIB)/%_c.o,$(C_SRC))
 OBJS += $(patsubst $(SOURCE)/%.s,$(LIB)/%_s.o,$(ASM_SRC))

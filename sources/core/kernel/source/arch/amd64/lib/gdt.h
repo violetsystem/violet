@@ -31,8 +31,8 @@ typedef struct {
 } __attribute__((packed)) tss_t;
 
 typedef struct {
-    uint16_t size;
-    uint64_t offset;
+    uint16_t limit;
+    uint64_t base;
 } __attribute__((packed)) gdtr_t;
 
 typedef struct {

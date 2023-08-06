@@ -13,11 +13,11 @@ static tss_t _tss = {
     .iopb_offset = 0,
 };
 
-static gdt_t _gdt = {};
+static __attribute__((aligned(4096))) gdt_t _gdt = {};
 
 static gdtr_t _gdtr = {
-    .size = sizeof(gdt_t) - 1,
-    .offset = (uint64_t) &_gdt,
+    .limit = sizeof(gdt_t) - 1,
+    .base = (uint64_t) &_gdt,
 };
 
 gdt_entry_t gdt_entry(uint32_t base, uint32_t limit, uint8_t granularity, uint8_t flags) {
