@@ -44,6 +44,7 @@ rwildcard = $(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(
 # Source Files
 C_SRC = $(SOURCE)/kernel.c # kernel starting point
 C_SRC += $(SOURCE)/boot/limine.c # bootprotocol specific
+C_SRC += $(wildcard $(SOURCE)/boot/limine/*.c) # bootprotocol specific
 C_SRC += $(call rwildcard,$(SOURCE)/boot/limine/aarch64,*.c) # bootprotocol specific & arch specific
 C_SRC += $(call rwildcard,$(SOURCE)/arch/aarch64,*.c) # arch specific
 C_SRC += $(call rwildcard,$(SOURCE)/lib,*.c) # library
