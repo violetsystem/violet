@@ -2,9 +2,14 @@
 #define _ARCH_H 1
 
 /**
- * Everything needed to initialize PMM/VMM
+ * arch specific stuff that don't need pmm and vmm to be initialized or that are needed to initialize vmm
 */
 void arch_stage1(void);
+
+/**
+ * arch specific stuff that need heap to be initialize
+*/
+void arch_stage2(void);
 
 #include <stdnoreturn.h>
 

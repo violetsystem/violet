@@ -9,6 +9,10 @@ void arch_stage1(void) {
     idt_init();
 }
 
+void arch_stage2(void) {
+    
+}
+
 noreturn void arch_idle(void) {
     for (;;) {
         __asm__ volatile("hlt");

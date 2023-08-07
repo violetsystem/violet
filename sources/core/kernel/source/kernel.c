@@ -9,7 +9,7 @@
 #include <kernel.h>
 
 /**
- * _start have to be called with 64 bits enabled!
+ * kernel_entry have to be called with 64 bits enabled!
  * it is preferable to make the less things before jumping into kernel_entry
 */
 void kernel_entry(void) {
@@ -26,6 +26,8 @@ void kernel_entry(void) {
     log_info("memory available = %lu MiB\n", pmm_get_available() / 0x100000);
     log_info("memory reserved  = %lu MiB\n", pmm_get_reserved() / 0x100000);
     log_print("\n");
+
+    arch_stage2();
 
     arch_idle();
 }
