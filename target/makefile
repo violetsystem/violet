@@ -78,7 +78,7 @@ ovmf-aarch64:
 LIARM_QEMU_FLAGS = \
 	-bios $(EXTERN)/ovmf-aarch64/OVMF.fd \
 	-cdrom liarm/boot-violet.iso \
-	-cpu cortex-a76 \
+	-cpu cortex-a72 \
 	-machine virt \
 	-m 2G \
 	-smp cores=4 \
@@ -92,3 +92,23 @@ liarm/run: liarm/build ovmf-aarch64
 
 liarm/debug: liarm/build ovmf-aarch64
 	qemu-system-aarch64 $(LIARM_QEMU_FLAGS) -S -s
+
+# OpenSBI RISC-V64 (opris)
+
+opris/build:
+	@ rm -rf opris/
+	@ mkdir -m 777 -p opris/sysroot
+	@ mkdir -m 777 -p liarm/flash/limine
+	@ $(call info_kernel,"Compiling...")
+	@ make -C "$(KERNEL)/opensbi/riscv64" kernel.elf 
+	@ cp $(KERNEL)/opensbi/riscv64/bin/kernel.elf opris/flash/
+	@ $(call info_kernel,"done.")
+# todo
+
+OPRIS_QEMU_FLAGS = 
+
+opris/run: opris/build
+	qemu-system-riscv64 $(OPRIS_QEMU_FLAGS)
+
+opris/debug: opris/build
+	qemu-system-riscv64 $(OPRIS_QEMU_FLAGS) -S -s

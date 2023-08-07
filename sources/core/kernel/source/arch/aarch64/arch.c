@@ -6,7 +6,7 @@ void arch_stage1(void) {
 
 noreturn void arch_idle(void) {
     for (;;) {
-        asm volatile("wfi");
+        __asm__ volatile("wfi");
     }
 }
 

@@ -4,14 +4,14 @@
 #include <arch/amd64/lib/idt.h>
 
 void arch_stage1(void) {
-    asm volatile("cli");
+    __asm__ volatile("cli");
     gdt_init();
     idt_init();
 }
 
 noreturn void arch_idle(void) {
     for (;;) {
-        asm volatile("hlt");
+        __asm__ volatile("hlt");
     }
 }
 

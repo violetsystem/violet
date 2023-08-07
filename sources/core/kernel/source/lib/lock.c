@@ -12,7 +12,7 @@ __attribute__((noinline)) void spinlock_acquire(spinlock_t *lock) {
             goto deadlock;
         }
 #if defined (__x86_64__)
-        asm volatile ("pause");
+        __asm__ volatile ("pause");
 #endif
     }
     lock->last_acquirer = __builtin_return_address(0);
