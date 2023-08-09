@@ -55,6 +55,7 @@ C_SRC += $(wildcard $(SOURCE)/boot/limine/*.c) # bootprotocol specific
 C_SRC += $(call rwildcard,$(SOURCE)/boot/limine/amd64,*.c) # bootprotocol specific & arch specific
 C_SRC += $(call rwildcard,$(SOURCE)/arch/amd64,*.c) # arch specific
 C_SRC += $(call rwildcard,$(SOURCE)/lib,*.c) # library
+C_SRC += $(call rwildcard,$(SOURCE)/global,*.c) # global implemented
 
 ASM_SRC = $(call rwildcard,$(SOURCE)/boot/limine/amd64,*.s) # bootprotocol specific & arch specific
 ASM_SRC += $(call rwildcard,$(SOURCE)/arch/amd64,*.s) # arch specific

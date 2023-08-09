@@ -48,6 +48,7 @@ C_SRC += $(wildcard $(SOURCE)/boot/opensbi/*.c) # bootprotocol specific
 C_SRC += $(call rwildcard,$(SOURCE)/boot/opensbi/riscv64,*.c) # bootprotocol specific & arch specific
 C_SRC += $(call rwildcard,$(SOURCE)/arch/riscv64,*.c) # arch specific
 C_SRC += $(call rwildcard,$(SOURCE)/lib,*.c) # library
+C_SRC += $(call rwildcard,$(SOURCE)/global,*.c) # global implemented
 
 ASM_SRC = $(call rwildcard,$(SOURCE)/boot/opensbi/riscv64,*.s) # bootprotocol specific & arch specific
 ASM_SRC += $(call rwildcard,$(SOURCE)/arch/riscv64,*.s) # arch specific
