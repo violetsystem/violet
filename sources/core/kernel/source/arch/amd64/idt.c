@@ -1,9 +1,11 @@
-#include <arch/amd64/lib/idt.h>
-#include <arch/amd64/lib/gdt.h>
 
-extern void* __interrupt_vector[256];
+#include <arch/include.h>
+#include ARCH_INCLUDE(idt.h)
+#include ARCH_INCLUDE(gdt.h)
 
-static __attribute__((aligned(4096))) idt_t _idt = {};
+extern void* __interrupt_vector[IDT_ENTRY_COUNT];
+
+static __attribute__((aligned(PAGE_SIZE))) idt_t _idt = {};
 
 static idtr_t _idtr = {
     .limit = sizeof(idt_t) - 1,

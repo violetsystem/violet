@@ -37,7 +37,7 @@ CFLAGS = -I$(SOURCE) \
 		 -Werror \
 		 -Wstrict-prototypes
 
-ASMFLAGS = -f elf64
+ASMFLAGS = -i$(realpath $(SOURCE)/arch/amd64) -f elf64
 
 LDFLAGS = -T $(LDS) \
 		 -nostdlib \

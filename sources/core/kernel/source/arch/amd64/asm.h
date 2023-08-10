@@ -14,6 +14,12 @@ static inline void asm_write_cr0(uint64_t value) {
     __asm__ volatile("mov %0, %%cr0" ::"r"(value));  
 }
 
+static inline uint64_t asm_read_cr2(void) {  
+    uint64_t value = 0;
+    __asm__ volatile("mov %%cr2, %0" : "=r"(value));
+    return value;
+} 
+
 static inline uint64_t asm_read_cr3(void) {  
     uint64_t value = 0;
     __asm__ volatile("mov %%cr3, %0" : "=r"(value));

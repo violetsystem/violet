@@ -1,6 +1,7 @@
 #include <impl/serial.h>
 
-#include <arch/amd64/lib/io.h>
+#include <arch/include.h>
+#include ARCH_INCLUDE(io.h)
 
 #define COM1     0x3f8
 #define BOCHSLOG 0xe9

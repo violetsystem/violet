@@ -1,4 +1,5 @@
-#include <arch/amd64/lib/gdt.h>
+#include <arch/include.h>
+#include ARCH_INCLUDE(gdt.h)
 
 #include <lib/lock.h>
 

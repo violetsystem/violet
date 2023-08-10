@@ -1,7 +1,8 @@
 #include <impl/arch.h>
 
-#include <arch/amd64/lib/gdt.h>
-#include <arch/amd64/lib/idt.h>
+#include <arch/include.h>
+#include ARCH_INCLUDE(idt.h)
+#include ARCH_INCLUDE(gdt.h)
 
 void arch_stage1(void) {
     __asm__ volatile("cli");

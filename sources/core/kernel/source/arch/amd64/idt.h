@@ -2,6 +2,9 @@
 #define _AMD64_IDT_H 1
 
 #include <stdint.h>
+#include <global/pmm.h>
+
+#define IDT_ENTRY_COUNT (PAGE_SIZE / sizeof(idt_entry_t))
 
 enum
 {
@@ -26,10 +29,10 @@ typedef struct {
 } __attribute__((packed)) idt_entry_t;
 
 typedef struct {
-    idt_entry_t entries[256];
+    idt_entry_t entries[IDT_ENTRY_COUNT];
 } __attribute__((packed)) idt_t;
 
 void idt_init(void);
 void idt_update(idtr_t *idtr);
 
-#endif
+#endif // _AMD64_IDT_H

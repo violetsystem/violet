@@ -1,6 +1,23 @@
 #ifndef _IMPL_ARCH_H
 #define _IMPL_ARCH_H 1
 
+#include <arch/include.h>
+
+/* 
+The file in ARCH_INCLUDE(impl/vmm.h) is expected to have :
+    - The declaration of struct : arch_context_t
+    - The following macros :
+        - ARCH_CONTEXT_ARG0(context)
+        - ARCH_CONTEXT_ARG1(context)
+        - ARCH_CONTEXT_ARG2(context)
+        - ARCH_CONTEXT_ARG3(context)
+        - ARCH_CONTEXT_ARG4(context)
+        - ARCH_CONTEXT_ARG5(context)
+        - ARCH_CONTEXT_RETURN(context)
+        - ARCH_CONTEXT_SYSCALL_SELECTOR(context)
+*/
+#include ARCH_INCLUDE(impl/arch.h)
+
 /**
  * arch specific stuff that don't need pmm and vmm to be initialized or that are needed to initialize vmm
 */
