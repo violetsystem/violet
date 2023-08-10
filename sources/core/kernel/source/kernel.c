@@ -1,8 +1,9 @@
 #include <impl/serial.h>
+#include <impl/memory.h>
 #include <impl/boot.h>
 #include <impl/arch.h>
-#include <impl/pmm.h>
 #include <impl/vmm.h>
+#include <global/pmm.h>
 
 #include <lib/log.h>
 
@@ -21,8 +22,7 @@ void kernel_entry(void) {
     log_print("\n");
 
     arch_stage1();
-    pmm_init();
-    vmm_init();
+    memory_init();
     log_info("memory available = %lu MiB\n", pmm_get_available() / 0x100000);
     log_info("memory reserved  = %lu MiB\n", pmm_get_reserved() / 0x100000);
     log_print("\n");

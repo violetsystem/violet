@@ -1,5 +1,5 @@
-#ifndef _ARCH_H
-#define _ARCH_H 1
+#ifndef _IMPL_ARCH_H
+#define _IMPL_ARCH_H 1
 
 /**
  * arch specific stuff that don't need pmm and vmm to be initialized or that are needed to initialize vmm

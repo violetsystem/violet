@@ -33,7 +33,9 @@ CFLAGS = -I$(SOURCE) \
 		 -mno-3dnow \
 		 -mno-red-zone \
 		 -g \
-		 -fshort-wchar
+		 -fshort-wchar \
+		 -Werror \
+		 -Wstrict-prototypes
 
 ASMFLAGS = -f elf64
 
@@ -54,6 +56,7 @@ C_SRC += $(SOURCE)/boot/limine.c # bootprotocol specific
 C_SRC += $(wildcard $(SOURCE)/boot/limine/*.c) # bootprotocol specific
 C_SRC += $(call rwildcard,$(SOURCE)/boot/limine/amd64,*.c) # bootprotocol specific & arch specific
 C_SRC += $(call rwildcard,$(SOURCE)/arch/amd64,*.c) # arch specific
+C_SRC += $(call rwildcard,$(SOURCE)/global,*.c) # global
 C_SRC += $(call rwildcard,$(SOURCE)/lib,*.c) # library
 C_SRC += $(call rwildcard,$(SOURCE)/global,*.c) # global implemented
 

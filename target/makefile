@@ -36,17 +36,15 @@ ovmf-amd64:
 LIAMD_QEMU_FLAGS = \
 	-bios $(EXTERN)/ovmf-amd64/OVMF.fd \
 	-cdrom liamd/boot-violet.iso \
-	-cpu host \
 	-machine q35 \
 	-m 2G \
 	-smp cores=4 \
 	-serial stdio \
-	-enable-kvm \
 	-no-reboot \
 	-no-shutdown
 
 liamd/run: liamd/build ovmf-amd64
-	qemu-system-x86_64 $(LIAMD_QEMU_FLAGS)
+	qemu-system-x86_64 $(LIAMD_QEMU_FLAGS) -enable-kvm
 
 liamd/debug: liamd/build ovmf-amd64
 	qemu-system-x86_64 $(LIAMD_QEMU_FLAGS) -S -s

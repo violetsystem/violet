@@ -24,7 +24,9 @@ LD = ld.lld-16
 CFLAGS = -I$(SOURCE) \
 		 -ffreestanding \
 		 --target=aarch64-unknown-none-elf \
-		 -nostdlib
+		 -nostdlib \
+		 -Werror \
+		 -Wstrict-prototypes
 
 ASMFLAGS = -I$(SOURCE) \
 		   --target=aarch64-unknown-none-elf  \
@@ -42,11 +44,11 @@ LDFLAGS = -T $(LDS) \
 rwildcard = $(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
 
 # Source Files
-C_SRC = $(SOURCE)/kernel.c # kernel starting point
-C_SRC += $(SOURCE)/boot/limine.c # bootprotocol specific
+C_SRC = $(SOURCE)/boot/limine.c # bootprotocol specific
 C_SRC += $(wildcard $(SOURCE)/boot/limine/*.c) # bootprotocol specific
 C_SRC += $(call rwildcard,$(SOURCE)/boot/limine/aarch64,*.c) # bootprotocol specific & arch specific
 C_SRC += $(call rwildcard,$(SOURCE)/arch/aarch64,*.c) # arch specific
+C_SRC += $(call rwildcard,$(SOURCE)/global,*.c) # global
 C_SRC += $(call rwildcard,$(SOURCE)/lib,*.c) # library
 C_SRC += $(call rwildcard,$(SOURCE)/global,*.c) # global implemented
 

@@ -1,7 +1,9 @@
-#include <impl/pmm.h>
+#include <global/pmm.h>
 #include <boot/limine.h>
 
+#include <impl/vmm.h>
 #include <lib/math.h>
+#include <lib/assert.h>
 #include <lib/bitmap.h>
 #include <lib/memory.h>
 
@@ -10,78 +12,78 @@ static volatile struct limine_memmap_request memmap_request = {
     .revision = 0
 };
 
-static volatile struct limine_hhdm_request hhdm_request = {
-    .id = LIMINE_HHDM_REQUEST,
-    .revision = 0
-};
 
-uint8_t *bitmap = NULL;
+static void* pmm_get_memory_end(struct limine_memmap_response* memory_info) {
+    uintptr_t last_address = 0;
 
-uint64_t available_pages = 0;
-uint64_t used_pages = 0;
-uint64_t reserved_pages = 0;
+    for(uint64_t i = 0; i < memory_info->entry_count; i++) {
+        uintptr_t entry_last_address = memory_info->entries[i]->base + memory_info->entries[i]->length;
+        if(entry_last_address > last_address) {
+            last_address = entry_last_address;
+        }
+    }
 
-uint64_t highest_page_index = 0;
-uint64_t last_used_index = 0;
+    return (void*)last_address;
+}
+
+static size_t pmm_get_memory_size(struct limine_memmap_response* memory_info) {
+    uint64_t size = 0;
+
+    for(uint64_t i = 0; i < memory_info->entry_count; i++) {
+        size += memory_info->entries[i]->length;
+    }
+
+    return (size_t)size;
+}
+
+static struct limine_memmap_entry* pmm_find_free_entry(struct limine_memmap_response* memory_info, size_t minimum_size) {
+    for(uint64_t i = 0; i < memory_info->entry_count; i++) {
+        if(memory_info->entries[i]->type == LIMINE_MEMMAP_USABLE) {
+            if(memory_info->entries[i]->length >= minimum_size) {
+                return memory_info->entries[i];
+            }
+        }
+    }   
+    return NULL;
+}
 
 void pmm_init(void) {
-    struct limine_memmap_entry **entries = memmap_request.response->entries;
-    uint64_t entry_count = memmap_request.response->entry_count;
+    struct limine_memmap_response* memory_info = memmap_request.response;
 
-    uint64_t highest_address = 0;
+    void* memory_end = pmm_get_memory_end(memory_info);
+    size_t memory_size = pmm_get_memory_size(memory_info);
 
-    for (size_t i = 0; i < entry_count; i++) {
-        struct limine_memmap_entry *entry = entries[i];
+    size_t total_page_count = DIV_ROUNDUP((size_t)memory_end, PAGE_SIZE);
 
-        switch (entry->type) {
-            case LIMINE_MEMMAP_USABLE:
-                available_pages += DIV_ROUNDUP(entry->length, PAGE_SIZE);
-                highest_address = MAX(highest_address, entry->base + entry->length);
-                break;
-            case LIMINE_MEMMAP_RESERVED:
-            case LIMINE_MEMMAP_ACPI_RECLAIMABLE:
-            case LIMINE_MEMMAP_ACPI_NVS:
-            case LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE:
-            case LIMINE_MEMMAP_KERNEL_AND_MODULES:
-                reserved_pages += DIV_ROUNDUP(entry->length, PAGE_SIZE);
-                break;
+    available_pages = 0;
+    used_pages = 0;
+    total_pages = (uint64_t)total_page_count;
+    reserved_pages = (uint64_t)total_page_count;
+    highest_page_index = (uint64_t)total_page_count;
+
+    size_t bitmap_size = total_page_count / 8 + 1;
+    struct limine_memmap_entry* bitmap_memmap_entry = pmm_find_free_entry(memory_info, bitmap_size);
+
+    assert(bitmap_memmap_entry);
+
+    pmm_init_bitmap(vmm_get_virtual_address((void*)bitmap_memmap_entry->base), bitmap_size, true); /* Reserve all pages */
+
+    for(uint64_t i = 0; i < memory_info->entry_count; i++) {
+        if(memory_info->entries[i] != bitmap_memmap_entry) {
+            if(memory_info->entries[i]->type == LIMINE_MEMMAP_USABLE) {
+                pmm_unreserve_pages((void*)memory_info->entries[i]->base, memory_info->entries[i]->length / PAGE_SIZE);
+            }
+        }else{
+            if(memory_info->entries[i]->length != bitmap_size) {
+                uintptr_t bitmap_end_rounded_to_page = memory_info->entries[i]->base + bitmap_size;
+                
+                if(bitmap_end_rounded_to_page % PAGE_SIZE) {
+                    bitmap_end_rounded_to_page -= bitmap_end_rounded_to_page % PAGE_SIZE;
+                    bitmap_end_rounded_to_page += PAGE_SIZE;
+                }
+
+                pmm_unreserve_pages((void*)bitmap_end_rounded_to_page, (memory_info->entries[i]->length - bitmap_size) / PAGE_SIZE);
+            }
         }
     }
-
-    highest_page_index = highest_address / PAGE_SIZE;
-    uint64_t bitmap_size = ALIGN_UP(highest_page_index / 8, PAGE_SIZE);
-
-    for (size_t i = 0; i < entry_count; i++) {
-
-        struct limine_memmap_entry *entry = entries[i];
-
-        if (entry->type != LIMINE_MEMMAP_USABLE) {
-            continue;
-        }
-
-        if (entry->length >= bitmap_size) {
-            bitmap = (uint8_t*)(entry->base + hhdm_request.response->offset);
-
-            memset(bitmap, 0xff, bitmap_size);
-
-            entry->length -= bitmap_size;
-            entry->base += bitmap_size;
-
-            break;
-        }
-        
-    }
-
-    for (size_t i = 0; i < entry_count; i++) {
-        struct limine_memmap_entry *entry = entries[i];
-
-        if (entry->type != LIMINE_MEMMAP_USABLE) {
-            continue;
-        }
-
-        for (uint64_t j = 0; j < entry->length; j += PAGE_SIZE) {
-            bitmap_reset(bitmap, (entry->base + j) / PAGE_SIZE);
-        }
-    }
-
 }

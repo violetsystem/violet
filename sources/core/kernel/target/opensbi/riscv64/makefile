@@ -24,7 +24,9 @@ LD = ld.lld-16
 CFLAGS = -I$(SOURCE) \
 		 -ffreestanding \
 		 --target=riscv64-unknown-none-elf \
-		 -nostdlib
+		 -nostdlib \
+		 -Werror \
+		 -Wstrict-prototypes
 
 ASMFLAGS = -I$(SOURCE) \
 		   --target=riscv64-unknown-none-elf  \
@@ -47,6 +49,7 @@ C_SRC += $(SOURCE)/boot/opensbi.c # bootprotocol specific
 C_SRC += $(wildcard $(SOURCE)/boot/opensbi/*.c) # bootprotocol specific
 C_SRC += $(call rwildcard,$(SOURCE)/boot/opensbi/riscv64,*.c) # bootprotocol specific & arch specific
 C_SRC += $(call rwildcard,$(SOURCE)/arch/riscv64,*.c) # arch specific
+C_SRC += $(call rwildcard,$(SOURCE)/global,*.c) # global
 C_SRC += $(call rwildcard,$(SOURCE)/lib,*.c) # library
 C_SRC += $(call rwildcard,$(SOURCE)/global,*.c) # global implemented
 

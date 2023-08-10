@@ -1,5 +1,5 @@
-#ifndef _PANIC_H
-#define _PANIC_H 1
+#ifndef _IMPL_PANIC_H
+#define _IMPL_PANIC_H 1
 
 #include <stdnoreturn.h>
 
