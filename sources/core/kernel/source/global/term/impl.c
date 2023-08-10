@@ -43,14 +43,24 @@ void init_term(void* fb_base, uint64_t fb_width, uint64_t fb_height, uint64_t fb
         DEFAULT_MARGIN_GRADIENT
     };
 
-    //struct image_t image;
-    //image_open(&image, (uint64_t)image_base, image_size);
+    struct background_t back;
+    struct image_t image;
 
-    struct background_t back = {
-        NULL,
-        STRETCHED,
-        DEFAULT_BACKGROUND 
-    };
+    if(image_base && image_size){
+        image_open(&image, (uint64_t)image_base, image_size);
+        back = (struct background_t){
+            &image,
+            STRETCHED,
+            DEFAULT_BACKGROUND 
+        };
+    }else{
+        back = (struct background_t){
+            NULL,
+            STRETCHED,
+            DEFAULT_BACKGROUND 
+        };
+    }
+
 
     term_init(&terminal, callback, false, TERM_TABSIZE);
 

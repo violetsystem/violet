@@ -18,6 +18,7 @@ liamd/build:
 	@ $(call info_kernel,"Compiling...")
 	@ make -C "$(KERNEL)/limine/amd64" kernel.elf 
 	@ cp $(KERNEL)/limine/amd64/bin/kernel.elf liamd/flash/
+	@ cp term_wallpaper.bmp liamd/flash/
 	@ $(call info_kernel,"done.")
 	@ make -C "$(EXTERN)" limine
 	@ cp limine.cfg $(EXTERN)/limine/limine-bios.sys $(EXTERN)/limine/limine-bios-cd.bin $(EXTERN)/limine/limine-uefi-cd.bin liamd/flash/limine
@@ -58,6 +59,7 @@ liarm/build:
 	@ $(call info_kernel,"Compiling...")
 	@ make -C "$(KERNEL)/limine/aarch64" kernel.elf 
 	@ cp $(KERNEL)/limine/aarch64/bin/kernel.elf liarm/flash/
+	@ cp term_wallpaper.bmp liarm/flash/
 	@ $(call info_kernel,"done.")
 	@ make -C "$(EXTERN)" limine
 	@ cp limine.cfg $(EXTERN)/limine/limine-bios.sys $(EXTERN)/limine/limine-bios-cd.bin $(EXTERN)/limine/limine-uefi-cd.bin liarm/flash/limine
