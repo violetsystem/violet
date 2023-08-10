@@ -29,6 +29,8 @@ CFLAGS = -I$(SOURCE) \
 		 --target=x86_64-unknown-none-elf \
 		 -nostdlib \
 		 -fno-stack-protector \
+		 -mno-avx \
+		 -mno-sse \
 		 -mno-mmx \
 		 -mno-3dnow \
 		 -mno-red-zone \

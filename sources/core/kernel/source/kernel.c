@@ -5,6 +5,7 @@
 #include <impl/serial.h>
 #include <impl/memory.h>
 #include <global/heap.h>
+#include <impl/graphics.h>
 
 #include <lib/log.h>
 
@@ -27,6 +28,9 @@ void kernel_entry(void) {
     log_info("memory available = %lu MiB\n", pmm_get_available() / 0x100000);
     log_info("memory reserved  = %lu MiB\n", pmm_get_reserved() / 0x100000);
     log_print("\n");
+
+    /* graphics_init needs memory to be init*/
+    graphics_init();
 
     arch_stage2();
 

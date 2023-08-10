@@ -618,12 +618,12 @@ struct scaling_factor {
   bool multiply; // if true, need to multiply by raw_factor; otherwise need to divide by it
 };
 
-static double apply_scaling(double num, struct scaling_factor normalization)
+static void apply_scaling(double num, struct scaling_factor normalization, double* return_value)
 {
-  return normalization.multiply ? num * normalization.raw_factor : num / normalization.raw_factor;
+  *return_value = normalization.multiply ? num * normalization.raw_factor : num / normalization.raw_factor;
 }
 
-static double unapply_scaling(double normalized, struct scaling_factor normalization)
+static void unapply_scaling(double normalized, struct scaling_factor normalization, double* return_value)
 {
 #ifdef __GNUC__
 // accounting for a static analysis bug in GCC 6.x and earlier
@@ -632,13 +632,13 @@ static double unapply_scaling(double normalized, struct scaling_factor normaliza
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif
 #endif
-  return normalization.multiply ? normalized / normalization.raw_factor : normalized * normalization.raw_factor;
+  *return_value = normalization.multiply ? normalized / normalization.raw_factor : normalized * normalization.raw_factor;
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif
 }
 
-static struct scaling_factor update_normalization(struct scaling_factor sf, double extra_multiplicative_factor)
+static void update_normalization(struct scaling_factor sf, double extra_multiplicative_factor, struct scaling_factor* return_value)
 {
   struct scaling_factor result;
   if (sf.multiply) {
@@ -659,14 +659,15 @@ static struct scaling_factor update_normalization(struct scaling_factor sf, doub
       result.raw_factor = extra_multiplicative_factor / sf.raw_factor;
     }
   }
-  return result;
+  *return_value = result;
 }
 
 static struct double_components get_normalized_components(bool negative, printf_size_t precision, double non_normalized, struct scaling_factor normalization, int floored_exp10)
 {
   struct double_components components;
   components.is_negative = negative;
-  double scaled = apply_scaling(non_normalized, normalization);
+  double scaled;
+  apply_scaling(non_normalized, normalization, &scaled);
 
   bool close_to_representation_extremum = ( (-floored_exp10 + (int) precision) >= DBL_MAX_10_EXP - 1 );
   if (close_to_representation_extremum) {
@@ -676,10 +677,14 @@ static struct double_components get_normalized_components(bool negative, printf_
     return get_components(negative ? -scaled : scaled, precision);
   }
   components.integral = (int_fast64_t) scaled;
-  double remainder = non_normalized - unapply_scaling((double) components.integral, normalization);
+  double remainder;
+  unapply_scaling((double) components.integral, normalization, &remainder);
+  remainder = non_normalized - remainder;
   double prec_power_of_10 = powers_of_10[precision];
-  struct scaling_factor account_for_precision = update_normalization(normalization, prec_power_of_10);
-  double scaled_remainder = apply_scaling(remainder, account_for_precision);
+  struct scaling_factor account_for_precision;
+  update_normalization(normalization, prec_power_of_10, &account_for_precision);
+  double scaled_remainder;
+  apply_scaling(remainder, account_for_precision, &scaled_remainder);
   double rounding_threshold = 0.5;
 
   components.fractional = (int_fast64_t) scaled_remainder; // when precision == 0, the assigned value should be 0
@@ -805,7 +810,7 @@ static int bastardized_floor(double x)
 
 // Computes the base-10 logarithm of the input number - which must be an actual
 // positive number (not infinity or NaN, nor a sub-normal)
-static double log10_of_positive(double positive_number)
+static void log10_of_positive(double positive_number, double* return_value)
 {
   // The implementation follows David Gay (https://www.ampl.com/netlib/fp/dtoa.c).
   //
@@ -822,7 +827,7 @@ static double log10_of_positive(double positive_number)
   dwba.U = (dwba.U & (((double_uint_t) (1) << DOUBLE_STORED_MANTISSA_BITS) - 1U)) |
            ((double_uint_t) DOUBLE_BASE_EXPONENT << DOUBLE_STORED_MANTISSA_BITS);
   double z = (dwba.F - 1.5);
-  return (
+  *return_value = (
     // Taylor expansion around 1.5:
     0.1760912590556812420           // Expansion term 0: ln(1.5)            / ln(10)
     + z     * 0.2895296546021678851 // Expansion term 1: (M - 1.5)   * 2/3  / ln(10)
@@ -838,11 +843,11 @@ static double log10_of_positive(double positive_number)
 }
 
 
-static double pow10_of_int(int floored_exp10)
+static void pow10_of_int(int floored_exp10, double* return_value)
 {
   // A crude hack for avoiding undesired behavior with barely-normal or slightly-subnormal values.
   if (floored_exp10 == DOUBLE_MAX_SUBNORMAL_EXPONENT_OF_10) {
-    return DOUBLE_MAX_SUBNORMAL_POWER_OF_10;
+    *return_value = DOUBLE_MAX_SUBNORMAL_POWER_OF_10;
   }
   // Compute 10^(floored_exp10) but (try to) make sure that doesn't overflow
   double_with_bit_access dwba;
@@ -853,7 +858,7 @@ static double pow10_of_int(int floored_exp10)
   // compute exp(z) using continued fractions,
   // see https://en.wikipedia.org/wiki/Exponential_function#Continued_fractions_for_ex
   dwba.F *= 1 + 2 * z / (2 - z + (z2 / (6 + (z2 / (10 + z2 / 14)))));
-  return dwba.F;
+  *return_value = dwba.F;
 }
 
 static void print_exponential_number(output_gadget_t* output, double number, printf_size_t precision, printf_size_t width, printf_flags_t flags, char* buf, printf_size_t len)
@@ -873,9 +878,11 @@ static void print_exponential_number(output_gadget_t* output, double number, pri
     floored_exp10 = 0; // ... and no need to set a normalization factor or check the powers table
   }
   else  {
-    double exp10 = log10_of_positive(abs_number);
+    double exp10;
+    log10_of_positive(abs_number, &exp10);
     floored_exp10 = bastardized_floor(exp10);
-    double p10 = pow10_of_int(floored_exp10);
+    double p10;
+    pow10_of_int(floored_exp10, &p10);
     // correct for rounding errors
     if (abs_number < p10) {
       floored_exp10--;

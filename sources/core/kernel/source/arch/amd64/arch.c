@@ -8,7 +8,7 @@
 void arch_stage1(void) {
     __asm__ volatile("cli");
     gdt_init();
-    idt_init();
+    //idt_init();
 }
 
 void arch_stage2(void) {

@@ -39,6 +39,11 @@
         "__locale": "c",
         "__string": "c",
         "math.h": "c",
-        "atomic": "c"
+        "atomic": "c",
+        "compare": "c",
+        "vgafont.h": "c",
+        "heap.h": "c",
+        "sstream": "c",
+        "string.h": "c"
     }
 }
