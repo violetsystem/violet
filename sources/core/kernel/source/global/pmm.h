@@ -56,4 +56,4 @@ static inline uint64_t pmm_get_used(void) {
     return used_pages * PAGE_SIZE;
 }
 
-#endif // _PMM_H
+#endif // _GLOBAL_PMM_H

@@ -49,20 +49,20 @@ static bool is_panicking;
 
 static void dump_registers(arch_context_t* ctx) {
     log_print("REGISTERS : \n");
-    log_printf("rip: 0x%x | rsp: 0x%x\n", ctx->rip, ctx->rsp);
-    log_printf("cr2: 0x%x | cr3: 0x%x\n", asm_read_cr2(), ctx->cr3);
-    log_printf("cs : 0%x  | ss : 0%x | rflags: 0%x\n", ctx->cs, ctx->ss, ctx->rflags);
+    log_printf("rip: 0x%p | rsp: 0x%p\n", ctx->rip, ctx->rsp);
+    log_printf("cr2: 0x%p | cr3: 0x%p\n", asm_read_cr2(), ctx->cr3);
+    log_printf("cs : 0%p  | ss : 0%p | rflags: 0%p\n", ctx->cs, ctx->ss, ctx->rflags);
 
     log_printf("\n");
 
-    log_printf("rax: 0x%x | rbx: 0x%x\n", ctx->rax, ctx->rbx);
-    log_printf("rcx: 0x%x | rdx: 0x%x\n", ctx->rcx, ctx->rdx);
-    log_printf("rsi: 0x%x | rdi: 0x%x\n", ctx->rsi, ctx->rdi);
-    log_printf("rbp: 0x%x | r8 : 0x%x\n", ctx->rbp, ctx->r8);
-    log_printf("r9 : 0x%x | r10: 0x%x\n", ctx->r9, ctx->r10);
-    log_printf("r11: 0x%x | r12: 0x%x\n", ctx->r11, ctx->r12);
-    log_printf("r13: 0x%x | r14: 0x%x\n", ctx->r13, ctx->r14);
-    log_printf("r15: 0x%x\n", ctx->r15);
+    log_printf("rax: 0x%p | rbx: 0x%p\n", ctx->rax, ctx->rbx);
+    log_printf("rcx: 0x%p | rdx: 0x%p\n", ctx->rcx, ctx->rdx);
+    log_printf("rsi: 0x%p | rdi: 0x%p\n", ctx->rsi, ctx->rdi);
+    log_printf("rbp: 0x%p | r8 : 0x%p\n", ctx->rbp, ctx->r8);
+    log_printf("r9 : 0x%p | r10: 0x%p\n", ctx->r9, ctx->r10);
+    log_printf("r11: 0x%p | r12: 0x%p\n", ctx->r11, ctx->r12);
+    log_printf("r13: 0x%p | r14: 0x%p\n", ctx->r13, ctx->r14);
+    log_printf("r15: 0x%p\n", ctx->r15);
     log_print("\n");
     log_print("------------------------------------------------------------\n");
 }
@@ -72,7 +72,7 @@ static void dump_backtrace(arch_context_t* ctx) {
     struct stack_frame* frame = (struct stack_frame*)ctx->rbp;
 
     while (frame) {
-        log_printf("- %x\n", frame->rip);
+        log_printf("- %p\n", frame->rip);
         frame = frame->rbp;
     }
     log_print("\n");

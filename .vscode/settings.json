@@ -35,6 +35,10 @@
         "*.tcc": "c",
         "lock.h": "c",
         "panic.h": "c",
-        "kernel.h": "c"
+        "kernel.h": "c",
+        "__locale": "c",
+        "__string": "c",
+        "math.h": "c",
+        "atomic": "c"
     }
 }

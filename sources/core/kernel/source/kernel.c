@@ -1,9 +1,10 @@
-#include <impl/serial.h>
-#include <impl/memory.h>
+#include <impl/vmm.h>
 #include <impl/boot.h>
 #include <impl/arch.h>
-#include <impl/vmm.h>
 #include <global/pmm.h>
+#include <impl/serial.h>
+#include <impl/memory.h>
+#include <global/heap.h>
 
 #include <lib/log.h>
 
