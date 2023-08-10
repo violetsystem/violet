@@ -3,6 +3,7 @@
 #include <arch/include.h>
 #include ARCH_INCLUDE(idt.h)
 #include ARCH_INCLUDE(gdt.h)
+#include ARCH_INCLUDE(simd.h)
 
 void arch_stage1(void) {
     __asm__ volatile("cli");
@@ -11,7 +12,7 @@ void arch_stage1(void) {
 }
 
 void arch_stage2(void) {
-    
+    simd_init();
 }
 
 noreturn void arch_idle(void) {

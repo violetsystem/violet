@@ -47,7 +47,7 @@ struct stack_frame{
 
 static bool is_panicking;
 
-static void dump_registers(arch_context_t* ctx){
+static void dump_registers(arch_context_t* ctx) {
     log_print("REGISTERS : \n");
     log_printf("rip: 0x%x | rsp: 0x%x\n", ctx->rip, ctx->rsp);
     log_printf("cr2: 0x%x | cr3: 0x%x\n", asm_read_cr2(), ctx->cr3);
@@ -67,11 +67,11 @@ static void dump_registers(arch_context_t* ctx){
     log_print("------------------------------------------------------------\n");
 }
 
-static void dump_backtrace(arch_context_t* ctx){
+static void dump_backtrace(arch_context_t* ctx) {
     log_print("BACKTRACE : \n");
     struct stack_frame* frame = (struct stack_frame*)ctx->rbp;
 
-    while (frame){
+    while (frame) {
         log_printf("- %x\n", frame->rip);
         frame = frame->rbp;
     }
@@ -79,8 +79,8 @@ static void dump_backtrace(arch_context_t* ctx){
     log_print("------------------------------------------------------------\n");
 }
 
-static void interrupt_error_handler(arch_context_t* ctx, uint8_t cpu_id){
-    if(is_panicking){
+static void interrupt_error_handler(arch_context_t* ctx, uint8_t cpu_id) {
+    if(is_panicking) {
         arch_idle();
     }
 
@@ -100,8 +100,8 @@ static void interrupt_error_handler(arch_context_t* ctx, uint8_t cpu_id){
     panic("exception : %s | error code : %d | cpu id : %d\n", exceptions_list[ctx->interrupt_number], ctx->error_code, cpu_id);
 }
 
-void interrupt_handler(arch_context_t* ctx, uint8_t cpu_id){
-    if(ctx->interrupt_number < 32){
+void interrupt_handler(arch_context_t* ctx, uint8_t cpu_id) {
+    if(ctx->interrupt_number < 32) {
         interrupt_error_handler(ctx, cpu_id);
     }
 }

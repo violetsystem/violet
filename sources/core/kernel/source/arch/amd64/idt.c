@@ -1,4 +1,3 @@
-
 #include <arch/include.h>
 #include ARCH_INCLUDE(idt.h)
 #include ARCH_INCLUDE(gdt.h)
