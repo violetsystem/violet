@@ -54,6 +54,10 @@ tss_entry_t gdt_tss_entry(uintptr_t tss_address) {
     };
 }
 
+void gdt_init_cpu(void) {
+    gdt_update(&_gdtr);
+}
+
 void gdt_init(void) {
     _gdt.entries[0] = gdt_null_entry();
 
@@ -65,7 +69,7 @@ void gdt_init(void) {
     
     _gdt.tss = gdt_tss_entry((uintptr_t)&_tss);
 
-    gdt_update((uintptr_t)&_gdtr);
+    gdt_init_cpu();
 }
 
 static spinlock_t _gdt_lock = SPINLOCK_INIT;

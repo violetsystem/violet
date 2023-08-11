@@ -86,4 +86,17 @@ static inline uint32_t io_read32(uint16_t port) {
     return data;
 }
 
+static inline uint64_t rdmsr(uint32_t index){
+    uint32_t lower;
+    uint32_t upper;
+    asm volatile("rdmsr" : "=a"(lower), "=d"(upper) : "c"(index));
+    return ((uint64_t) upper << 32) | lower;
+}
+
+static inline void wrmsr(uint32_t index, uint64_t value){
+    uint32_t lower = (uint32_t) value;
+    uint32_t upper = (uint32_t) (value >> 32);
+    asm volatile("wrmsr" :: "a"(lower), "c"(index), "d"(upper));
+}
+
 #endif // _AMD64_ASM_H

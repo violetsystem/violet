@@ -1,6 +1,8 @@
 #ifndef _AMD64_CPU_H
 #define _AMD64_CPU_H 1
 
+#include <stdint.h>
+
 // CPUID_FEAT
 #define CPUID_FEAT_ECX_SSE3         (1 << 0)
 #define CPUID_FEAT_ECX_PCLMUL       (1 << 1)
@@ -113,5 +115,14 @@
 #define XCR0_ZMM0_15_ENABLE     (1 << 6)
 #define XCR0_ZMM16_32_ENABLE    (1 << 7)
 #define XCR0_PKRU_ENABLE        (1 << 9)
+
+void cpu_init(void);
+void reload_gs_fs(void);
+void set_cpu_gs_base(uint64_t value);
+void set_cpu_gs_kernel_base(uint64_t value);
+void set_cpu_fs_base(uint64_t value);
+uint64_t get_cpu_context(uint64_t index);
+void set_cpu_context(uint64_t index, uint64_t value);
+uint8_t cpu_get_apicid(void);
 
 #endif

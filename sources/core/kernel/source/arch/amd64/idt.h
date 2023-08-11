@@ -32,7 +32,8 @@ typedef struct {
     idt_entry_t entries[IDT_ENTRY_COUNT];
 } __attribute__((packed)) idt_t;
 
+void idt_init_cpu(void);
 void idt_init(void);
-void idt_update(idtr_t *idtr);
+void idt_update(idtr_t* idtr);
 
 #endif // _AMD64_IDT_H

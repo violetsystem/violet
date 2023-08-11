@@ -20,7 +20,7 @@ extern interrupt_handler
     cld
     
     mov rdi, rsp
-    mov rsi, 0
+    mov rsi, [gs:0x0]
     
     call interrupt_handler
 

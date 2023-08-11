@@ -45,6 +45,7 @@
         "heap.h": "c",
         "sstream": "c",
         "string.h": "c",
-        "term.h": "c"
+        "term.h": "c",
+        "time.h": "c"
     }
 }

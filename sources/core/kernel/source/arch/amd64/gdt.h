@@ -66,11 +66,12 @@ gdt_entry_t gdt_simple_entry(uint8_t flags, uint8_t granularity);
 gdt_entry_t gdt_null_entry(void);
 tss_entry_t gdt_tss_entry(uintptr_t tss_address);
 
+void gdt_init_cpu(void);
 void gdt_init(void);
 void gdt_load_tss(tss_t *tss);
 
 // implemented in "gdt.s"
-void gdt_update(uint64_t descriptor);
+void gdt_update(gdtr_t* gdtr);
 void tss_update(void);
 
 #endif // _AMD64_GDT_H

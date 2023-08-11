@@ -4,6 +4,7 @@
 #include <impl/panic.h>
 #include <arch/include.h>
 #include ARCH_INCLUDE(asm.h)
+#include ARCH_INCLUDE(apic.h)
 #include ARCH_INCLUDE(impl/arch.h)
 
 char* exceptions_list[32] = {
@@ -103,5 +104,8 @@ static void interrupt_error_handler(arch_context_t* ctx, uint8_t cpu_id) {
 void interrupt_handler(arch_context_t* ctx, uint8_t cpu_id) {
     if(ctx->interrupt_number < 32) {
         interrupt_error_handler(ctx, cpu_id);
+    }else{
+        log_printf("Interrupt : %d CPU : %d\n", ctx->interrupt_number, cpu_id);
     }
+    local_apic_eoi(cpu_id);
 }

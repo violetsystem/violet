@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#define KERNEL_STACK_SIZE 0x10000
+
 #define ARCH_CONTEXT_ARG0(context)              ((context)->rdi)
 #define ARCH_CONTEXT_ARG1(context)              ((context)->rsi)
 #define ARCH_CONTEXT_ARG2(context)              ((context)->rdx)

@@ -7,6 +7,9 @@
 #include <lib/bitmap.h>
 #include <lib/memory.h>
 
+#include <arch/include.h>
+#include ARCH_INCLUDE(apic.h)
+
 static volatile struct limine_memmap_request memmap_request = {
     .id = LIMINE_MEMMAP_REQUEST,
     .revision = 0
@@ -86,4 +89,5 @@ void pmm_init(void) {
             }
         }
     }
+    pmm_reserve_pages((void*)TRAMPOLINE_ADDRESS, TRAMPOLINE_SIZE / PAGE_SIZE);
 }

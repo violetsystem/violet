@@ -162,7 +162,7 @@ int vmm_map(vmm_space_t space, memory_range_t virtual_range, memory_range_t phys
     struct vmm_page_table* table = vmm_get_virtual_address(space);
 
     for(uintptr_t i = 0; i < virtual_range.size; i += PAGE_SIZE) {
-        assert(!vmm_map_page(table, (void*)((uintptr_t)virtual_range.address + i), (void*)((uintptr_t)physical_range.address + i), flags));
+        vmm_map_page(table, (void*)((uintptr_t)virtual_range.address + i), (void*)((uintptr_t)physical_range.address + i), flags);
     }
 
     return 0;

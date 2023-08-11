@@ -23,9 +23,13 @@ idt_entry_t idt_entry(void* handler, uint8_t ist, uint8_t idt_flags) {
     };
 }
 
+void idt_init_cpu(void){
+    idt_update(&_idtr);
+}
+
 void idt_init(void) {
     for (uint16_t i = 0; i < 256; i++) {
         _idt.entries[i] = idt_entry(__interrupt_vector[i], 0, IDT_GATE);
     }
-    idt_update(&_idtr);
+    idt_init_cpu();
 }
