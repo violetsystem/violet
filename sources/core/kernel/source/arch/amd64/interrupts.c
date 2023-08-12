@@ -2,10 +2,14 @@
 #include <lib/log.h>
 #include <impl/arch.h>
 #include <impl/panic.h>
+#include <global/syscall.h>
+#include <global/scheduler.h>
+
 #include <arch/include.h>
 #include ARCH_INCLUDE(asm.h)
 #include ARCH_INCLUDE(apic.h)
 #include ARCH_INCLUDE(impl/arch.h)
+#include ARCH_INCLUDE(interrupts.h)
 
 char* exceptions_list[32] = {
     "DivisionByZero",
@@ -48,27 +52,27 @@ struct stack_frame{
 
 static bool is_panicking;
 
-static void dump_registers(arch_context_t* ctx) {
+static void dump_registers(cpu_context_t* ctx) {
     log_print("REGISTERS : \n");
-    log_printf("rip: 0x%p | rsp: 0x%p\n", ctx->rip, ctx->rsp);
-    log_printf("cr2: 0x%p | cr3: 0x%p\n", asm_read_cr2(), ctx->cr3);
-    log_printf("cs : 0%p  | ss : 0%p | rflags: 0%p\n", ctx->cs, ctx->ss, ctx->rflags);
+    log_printf("rip: %p | rsp: %p\n", ctx->rip, ctx->rsp);
+    log_printf("cr2: %p | cr3: %p\n", asm_read_cr2(), ctx->cr3);
+    log_printf("cs : %p  | ss : %p | rflags: %p\n", ctx->cs, ctx->ss, ctx->rflags);
 
     log_printf("\n");
 
-    log_printf("rax: 0x%p | rbx: 0x%p\n", ctx->rax, ctx->rbx);
-    log_printf("rcx: 0x%p | rdx: 0x%p\n", ctx->rcx, ctx->rdx);
-    log_printf("rsi: 0x%p | rdi: 0x%p\n", ctx->rsi, ctx->rdi);
-    log_printf("rbp: 0x%p | r8 : 0x%p\n", ctx->rbp, ctx->r8);
-    log_printf("r9 : 0x%p | r10: 0x%p\n", ctx->r9, ctx->r10);
-    log_printf("r11: 0x%p | r12: 0x%p\n", ctx->r11, ctx->r12);
-    log_printf("r13: 0x%p | r14: 0x%p\n", ctx->r13, ctx->r14);
-    log_printf("r15: 0x%p\n", ctx->r15);
+    log_printf("rax: %p | rbx: %p\n", ctx->rax, ctx->rbx);
+    log_printf("rcx: %p | rdx: %p\n", ctx->rcx, ctx->rdx);
+    log_printf("rsi: %p | rdi: %p\n", ctx->rsi, ctx->rdi);
+    log_printf("rbp: %p | r8 : %p\n", ctx->rbp, ctx->r8);
+    log_printf("r9 : %p | r10: %p\n", ctx->r9, ctx->r10);
+    log_printf("r11: %p | r12: %p\n", ctx->r11, ctx->r12);
+    log_printf("r13: %p | r14: %p\n", ctx->r13, ctx->r14);
+    log_printf("r15: %p\n", ctx->r15);
     log_print("\n");
     log_print("------------------------------------------------------------\n");
 }
 
-static void dump_backtrace(arch_context_t* ctx) {
+static void dump_backtrace(cpu_context_t* ctx) {
     log_print("BACKTRACE : \n");
     struct stack_frame* frame = (struct stack_frame*)ctx->rbp;
 
@@ -80,7 +84,7 @@ static void dump_backtrace(arch_context_t* ctx) {
     log_print("------------------------------------------------------------\n");
 }
 
-static void interrupt_error_handler(arch_context_t* ctx, uint8_t cpu_id) {
+static void interrupt_error_handler(cpu_context_t* ctx, uint8_t cpu_id) {
     if(is_panicking) {
         arch_idle();
     }
@@ -101,11 +105,14 @@ static void interrupt_error_handler(arch_context_t* ctx, uint8_t cpu_id) {
     panic("exception : %s | error code : %d | cpu id : %d\n", exceptions_list[ctx->interrupt_number], ctx->error_code, cpu_id);
 }
 
-void interrupt_handler(arch_context_t* ctx, uint8_t cpu_id) {
-    if(ctx->interrupt_number < 32) {
+void interrupt_handler(cpu_context_t* ctx, uint8_t cpu_id) {
+    if(ctx->interrupt_number == INT_SCHEDULE_APIC_TIMER){
+        scheduler_handler(ctx);
+    }else if(ctx->interrupt_number < 32) {
         interrupt_error_handler(ctx, cpu_id);
     }else{
-        log_printf("Interrupt : %d CPU : %d\n", ctx->interrupt_number, cpu_id);
+        // TODO
     }
+
     local_apic_eoi(cpu_id);
 }

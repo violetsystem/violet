@@ -251,7 +251,7 @@ void start_lapic_timer(void){
     struct local_apic_interrupt_register timer_registers;
 
     /* don't forget to define all the struct because it can be corrupt by the stack */
-    timer_registers.vector = INT_SCHEDULE_APIC;
+    timer_registers.vector = INT_SCHEDULE_APIC_TIMER;
     timer_registers.message_type = local_apic_interrupt_register_message_type_fixed;
     timer_registers.delivery_status = local_apic_interrupt_register_message_type_iddle;
     timer_registers.remote_irr = local_apic_interrupt_register_remote_irr_completed;

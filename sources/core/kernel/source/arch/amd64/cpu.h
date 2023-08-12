@@ -116,6 +116,31 @@
 #define XCR0_ZMM16_32_ENABLE    (1 << 7)
 #define XCR0_PKRU_ENABLE        (1 << 9)
 
+// REFLAGS
+#define RFLAGS_CARRY                        (1 << 0)
+#define RFLAGS_ONE                          (1 << 1)
+#define RFLAGS_PARITY                       (1 << 2)
+#define RFLAGS_RESERVED1                    (1 << 3)
+#define RFLAGS_AUX_CARRY                    (1 << 4)
+#define RFLAGS_RESERVED2                    (1 << 5)
+#define RFLAGS_ZERO                         (1 << 6)
+#define RFLAGS_SIGN                         (1 << 7)
+#define RFLAGS_TRAP                         (1 << 8)
+#define RFLAGS_INTERRUPT_ENABLE             (1 << 9)
+#define RFLAGS_DIRECTION                    (1 << 10)
+#define RFLAGS_OVERFLOW                     (1 << 11)
+#define RFLAGS_IO_PRIVILEGE                 (3 << 12)
+#define RFLAGS_NESTED_TASK                  (1 << 14)
+#define RFLAGS_RESERVED3                    (1 << 15)
+#define RFLAGS_RESUME                       (1 << 16)
+#define RFLAGS_VIRTUAL_8086                 (1 << 17)
+#define RFLAGS_ALIGNMENT_CHECK              (1 << 18)
+#define RFLAGS_ACCESS_CONTROL               (1 << 18)
+#define RFLAGS_VIRTUAL_INTERRUPT            (1 << 19)
+#define RFLAGS_VIRTUAL_INTERRUPT_PENDING    (1 << 20)
+#define RFLAGS_ID                           (1 << 21)
+
+
 void cpu_init(void);
 void reload_gs_fs(void);
 void set_cpu_gs_base(uint64_t value);

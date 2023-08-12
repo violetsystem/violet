@@ -5,7 +5,7 @@
 
 /* 
 The file in ARCH_INCLUDE(impl/vmm.h) is expected to have :
-    - The declaration of struct : arch_context_t
+    - The declaration of struct : cpu_context_t
     - The following macros :
         - ARCH_CONTEXT_ARG0(context)
         - ARCH_CONTEXT_ARG1(context)
@@ -30,6 +30,7 @@ void arch_stage2(void);
 
 #include <stdnoreturn.h>
 
+void arch_pause(void);
 noreturn void arch_idle(void);
 noreturn void arch_reboot(void);
 noreturn void arch_shutdown(void);

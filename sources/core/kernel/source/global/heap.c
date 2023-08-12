@@ -167,7 +167,7 @@ void* malloc(size_t size) {
     spinlock_acquire(&lock);
     struct heap_segment_header* current_seg = (struct heap_segment_header*)main_segment;
     uint64_t size_with_header = size + sizeof(struct heap_segment_header);
-    while(true) {
+    while(current_seg) {
         if(current_seg->is_free) {
             if(current_seg->length > size_with_header) {
                 // split this segment in two 
@@ -185,7 +185,6 @@ void* malloc(size_t size) {
                 return (void*)((uint64_t)current_seg + sizeof(struct heap_segment_header));
             }
         }
-        if(current_seg->next == NULL) break;
         current_seg = current_seg->next;
     }
     

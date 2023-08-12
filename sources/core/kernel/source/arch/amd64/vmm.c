@@ -126,9 +126,17 @@ static int vmm_flush_page(void* virtual_page) {
 }
 
 vmm_space_t vmm_create_space(void) {
-    // TODO
+    vmm_space_t space = pmm_allocate_page();
+    struct vmm_page_table* table = vmm_get_virtual_address(space);
+    memset(table, 0, PAGE_SIZE);
 
-    return NULL;
+    struct vmm_page_table* kernel_table = vmm_get_virtual_address(kernel_space);
+
+    for(uint16_t i = VMM_HALF_TABLE; i < VMM_END_TABLE; i++){
+        table->entries[i] = kernel_table->entries[i];
+    }
+
+    return space;
 }
 
 vmm_space_t vmm_get_kernel_space(void) {

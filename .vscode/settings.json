@@ -46,6 +46,20 @@
         "sstream": "c",
         "string.h": "c",
         "term.h": "c",
-        "time.h": "c"
+        "time.h": "c",
+        "syscall.h": "c",
+        "cstdlib": "c",
+        "scheduler.h": "c",
+        "functional": "c",
+        "istream": "c",
+        "ostream": "c",
+        "ranges": "c",
+        "ratio": "c",
+        "tuple": "c",
+        "type_traits": "c",
+        "__tuple": "c",
+        "cstddef": "c",
+        "limits": "c",
+        "context.h": "c"
     }
 }

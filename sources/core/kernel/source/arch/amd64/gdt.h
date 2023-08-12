@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#define GDT_ENTRY_COUNT 5
+#define GDT_ENTRY_COUNT 6
 #define GDT_SEGMENT (0b00010000)
 #define GDT_PRESENT (0b10000000)
 #define GDT_USER (0b01100000)
@@ -12,10 +12,12 @@
 #define GDT_LONG_MODE_GRANULARITY 0b0010
 #define GDT_FLAGS 0b1100
 
+#define GDT_NULL_0 (0)
 #define GDT_KERNEL_CODE (1)
 #define GDT_KERNEL_DATA (2)
-#define GDT_USER_DATA (3)
-#define GDT_USER_CODE (4)
+#define GDT_NULL_1 (3)
+#define GDT_USER_DATA (4)
+#define GDT_USER_CODE (5)
 
 #define GDT_RING_3 (3)
 

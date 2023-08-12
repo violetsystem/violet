@@ -59,11 +59,11 @@ void gdt_init_cpu(void) {
 }
 
 void gdt_init(void) {
-    _gdt.entries[0] = gdt_null_entry();
-
+    _gdt.entries[GDT_NULL_0] = gdt_null_entry();
     _gdt.entries[GDT_KERNEL_CODE] = gdt_simple_entry(GDT_PRESENT | GDT_SEGMENT | GDT_READWRITE | GDT_EXECUTABLE, GDT_LONG_MODE_GRANULARITY);
     _gdt.entries[GDT_KERNEL_DATA] = gdt_simple_entry(GDT_PRESENT | GDT_SEGMENT | GDT_READWRITE, 0);
 
+    _gdt.entries[GDT_NULL_1] = gdt_null_entry();
     _gdt.entries[GDT_USER_CODE] = gdt_simple_entry(GDT_PRESENT | GDT_SEGMENT | GDT_READWRITE | GDT_EXECUTABLE | GDT_USER, GDT_LONG_MODE_GRANULARITY);
     _gdt.entries[GDT_USER_DATA] = gdt_simple_entry(GDT_PRESENT | GDT_SEGMENT | GDT_READWRITE | GDT_USER, 0);
     

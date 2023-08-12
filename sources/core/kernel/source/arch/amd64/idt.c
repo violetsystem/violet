@@ -1,6 +1,7 @@
 #include <arch/include.h>
 #include ARCH_INCLUDE(idt.h)
 #include ARCH_INCLUDE(gdt.h)
+#include ARCH_INCLUDE(interrupts.h)
 
 extern void* __interrupt_vector[IDT_ENTRY_COUNT];
 
@@ -14,7 +15,7 @@ static idtr_t _idtr = {
 idt_entry_t idt_entry(void* handler, uint8_t ist, uint8_t idt_flags) {
     return (idt_entry_t) {
         .offset_low = ((uint64_t)handler) & 0xffff,
-        .code_segment = GDT_KERNEL_CODE * 8,
+        .code_segment = GDT_KERNEL_CODE * sizeof(gdt_entry_t),
         .ist = ist,
         .attributes = idt_flags,
         .offset_middle = ((uint64_t)handler >> 16) & 0xffff,

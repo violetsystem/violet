@@ -14,6 +14,6 @@ gdt_update:
 
 global tss_update
 tss_update:
-  mov ax, 0x28
+  mov ax, 0x30
   ltr ax
   ret

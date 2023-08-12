@@ -14,6 +14,7 @@
     push    rcx
     push    rbx
     push    rax
+    push   qword [gs:0x8]
     mov     rax, cr3
     push    rax
 %endmacro
@@ -21,6 +22,7 @@
 %macro    POP_REG        0
     pop    rax
     mov    cr3, rax
+    pop    qword [gs:0x8]
     pop    rax
     pop    rbx
     pop    rcx

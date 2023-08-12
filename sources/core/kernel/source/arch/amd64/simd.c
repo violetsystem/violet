@@ -1,3 +1,5 @@
+#include <global/heap.h>
+
 #include <arch/include.h>
 #include ARCH_INCLUDE(cpu.h)
 #include ARCH_INCLUDE(asm.h)
@@ -13,10 +15,18 @@ void simd_init(void) {
     asm_fninit();
 }
 
-void simd_save(void* location) {
-    asm volatile("fxsave (%0) "::"r"(location));
+void* simd_create_context(void) {
+    return calloc(1, 512);
 }
 
-void simd_restore(void* location) {
-    asm volatile("fxrstor (%0) "::"r"(location));
+void simd_free_context(void* ctx) {
+    free(ctx);
+}
+
+void simd_save_context(void* ctx) {
+    asm volatile("fxsave (%0) "::"r"(ctx));
+}
+
+void simd_restore_context(void* ctx) {
+    asm volatile("fxrstor (%0) "::"r"(ctx));
 }

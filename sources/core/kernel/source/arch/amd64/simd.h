@@ -3,7 +3,9 @@
 
 void simd_init(void);
 
-void simd_save(void* location);
-void simd_restore(void* location);
+void* simd_create_context(void);
+void simd_free_context(void* ctx);
+void simd_save_context(void* ctx);
+void simd_restore_context(void* ctx);
 
 #endif

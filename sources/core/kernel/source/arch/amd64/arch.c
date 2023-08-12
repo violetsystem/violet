@@ -10,6 +10,7 @@
 #include ARCH_INCLUDE(simd.h)
 #include ARCH_INCLUDE(boot.h)
 #include ARCH_INCLUDE(hpet.h)
+#include ARCH_INCLUDE(syscall.h)
 
 
 void arch_stage1(void) {
@@ -32,9 +33,16 @@ void arch_stage2(void) {
     apic_init(madt);
 
     smp_init();
+
+    syscall_enable(GDT_KERNEL_CODE * sizeof(gdt_entry_t), GDT_USER_CODE * sizeof(gdt_entry_t));
+
     start_lapic_timer();
 
     __asm__ volatile("sti");
+}
+
+void arch_pause(void) {
+    __asm__ volatile("pause");
 }
 
 noreturn void arch_idle(void) {
@@ -52,4 +60,3 @@ noreturn void arch_shutdown(void) {
     // todo
     arch_idle();
 }
-

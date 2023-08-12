@@ -8,6 +8,10 @@ void arch_stage2(void) {
     
 }
 
+void arch_pause(void) {
+    
+}
+
 noreturn void arch_idle(void) {
     for (;;) {
         __asm__ volatile("wfi");
