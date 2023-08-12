@@ -7,9 +7,9 @@
 
 void initrd_init(void);
 
-file_t* initrd_get_file(const char* path, int flags);
-file_t* initrd_get_file_base(file_t* file_ptr);
-void initrd_read_file(file_t* file_ptr, void* base, size_t size);
-ssize_t initrd_get_file_size(file_t* file_ptr);
+void* initrd_get_file(const char* path);
+void* initrd_get_file_base(void* file_ptr);
+void initrd_read_file(void* file_ptr, void* base, size_t size);
+ssize_t initrd_get_file_size(void* file_ptr);
 
 #endif

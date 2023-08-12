@@ -13,7 +13,7 @@ const char* term_wallpaper_path = "/term_wallpaper.bmp";
 void graphics_init(void) {
     if(framebuffer_request.response->framebuffer_count) {
         struct limine_framebuffer* framebuffer = framebuffer_request.response->framebuffers[0];
-        void* file_ptr = initrd_get_file(term_wallpaper_path, 0);
+        void* file_ptr = initrd_get_file(term_wallpaper_path);
         void* file_base = NULL;
         size_t file_size = 0;
         if(file_ptr){

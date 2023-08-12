@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <lib/string.h>
 #include <lib/memory.h>
+#include <global/heap.h>
 #include <global/modules.h>
 
 static volatile struct limine_module_request module_request = {
@@ -26,11 +27,11 @@ static struct limine_file* initrd_get_file_ptr(const char* path){
 
 static vfs_t early_vfs_handler;
 
-file_t* initrd_get_file(const char* path, int flags){
-    return (file_t*)initrd_get_file_ptr(path);
+void* initrd_get_file(const char* path){
+    return (void*)initrd_get_file_ptr(path);
 }
 
-file_t* initrd_get_file_base(file_t* file_ptr){
+void* initrd_get_file_base(void* file_ptr){
     if(file_ptr){
         struct limine_file* file = (struct limine_file*)file_ptr;
         return file->address;
@@ -39,7 +40,7 @@ file_t* initrd_get_file_base(file_t* file_ptr){
     return NULL;
 }
 
-int initrd_read_file(file_t* file_ptr, void* base, size_t size){
+int initrd_read_file(void* file_ptr, void* base, size_t size){
     if(file_ptr){
         struct limine_file* file = (struct limine_file*)file_ptr;
         size_t size_to_copy = size;
@@ -53,7 +54,7 @@ int initrd_read_file(file_t* file_ptr, void* base, size_t size){
     return -EINVAL;
 }
 
-ssize_t initrd_get_file_size(file_t* file_ptr){
+ssize_t initrd_get_file_size(void* file_ptr){
     if(file_ptr){
         struct limine_file* file = (struct limine_file*)file_ptr;
         return file->size;
@@ -62,7 +63,39 @@ ssize_t initrd_get_file_size(file_t* file_ptr){
     return -EINVAL;
 }
 
+size_t initrd_read(void* buffer, size_t size, file_t* file){
+    if(file == NULL){
+        return 0;
+    }
+
+    size_t file_size = initrd_get_file_size(file->internal_data);
+    if(file_size < file->seek_position + size){
+        size = file_size - file->seek_position;
+    }
+
+    memcpy(buffer, initrd_get_file_base(file->internal_data) + file->seek_position, size);
+
+    return size;
+}
+
+size_t initrd_write(void* buffer, size_t size, file_t* file){
+    return 0;
+}
+
+file_t* initrd_open(const char* path, int flags){
+    void* file_ptr = initrd_get_file(path);
+    if(file_ptr != NULL){
+        file_t* file = (file_t*)malloc(sizeof(file_t));
+        file->internal_data = file_ptr;
+        file->read = &initrd_read;
+        file->write = &initrd_write;
+        return file;
+    }else{
+        return NULL;
+    }
+}
+
 void initrd_init(void) {
-    early_vfs_handler.open = &initrd_get_file;
+    early_vfs_handler.open = &initrd_open;
     vfs_handler = &early_vfs_handler;
 }
