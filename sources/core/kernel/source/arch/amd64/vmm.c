@@ -35,6 +35,7 @@
 
 void* hhdm_address = NULL;
 vmm_space_t kernel_space = NULL;
+void* vmm_module_address_iteration = NULL;
 
 typedef uint64_t vmm_entry;
 
@@ -249,4 +250,17 @@ int vmm_preload_higher_half_entries(vmm_space_t space) {
     }
 
     return 0;
+}
+
+void* vmm_map_module(size_t size){
+    if(size % PAGE_SIZE){
+        size -= size % PAGE_SIZE;
+        size += PAGE_SIZE;
+    }
+
+    void* return_value = vmm_module_address_iteration;
+
+    vmm_module_address_iteration = (void*)((uintptr_t)vmm_module_address_iteration + (uintptr_t)size);
+
+    return return_value;
 }

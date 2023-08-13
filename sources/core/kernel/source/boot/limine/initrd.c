@@ -82,13 +82,20 @@ size_t initrd_write(void* buffer, size_t size, file_t* file){
     return 0;
 }
 
+int initrd_close(file_t* file){
+    return 0;
+}
+
 file_t* initrd_open(const char* path, int flags){
     void* file_ptr = initrd_get_file(path);
     if(file_ptr != NULL){
         file_t* file = (file_t*)malloc(sizeof(file_t));
+        file->size = initrd_get_file_size(file_ptr);
+        file->seek_position = 0;
         file->internal_data = file_ptr;
         file->read = &initrd_read;
         file->write = &initrd_write;
+        file->close = &initrd_close;
         return file;
     }else{
         return NULL;

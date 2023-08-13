@@ -65,6 +65,11 @@
         "modules.h": "c",
         "file.h": "c",
         "initrd.h": "c",
-        "locale": "c"
+        "locale": "c",
+        "span": "c",
+        "elf_loader.h": "c",
+        "graphics.h": "c",
+        "elf.h": "c",
+        "stdbool.h": "c"
     }
 }
