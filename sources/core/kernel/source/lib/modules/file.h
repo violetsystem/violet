@@ -1,6 +1,9 @@
 #ifndef _MODULES_FILE_H
 #define _MODULES_FILE_H 1
 
+#include <stddef.h>
+#include <stdint.h>
+
 
 typedef struct file_t{
     size_t seek_position;

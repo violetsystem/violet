@@ -15,7 +15,7 @@ LD = ld.lld-16
 
 # Tools Config
 CFLAGS = -I$(SOURCE) \
-CFLAGS = -I$(KERNEL_SOURCE) \
+ 		 -I$(KERNEL_SOURCE) \
 		 -ffreestanding \
 		 -fPIC \
 		 -fpie \
@@ -40,6 +40,6 @@ C_SRC = $(filter-out $(SOURCE)/main.c,$(call rwildcard,$(SOURCE),*.c))
 
 # Target
 build:
-	mkdir -m 777 -p $(BIN)
-	$(CC) $(CFLAGS) -c $(SOURCE)/main.c -o $(BIN)/test.ksys
+	@ mkdir -m 777 -p $(BIN)
+	@ $(CC) $(CFLAGS) -c $(SOURCE)/main.c -o $(BIN)/test.ksys
 

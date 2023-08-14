@@ -10,12 +10,6 @@ LIB = lib
 
 LDS = kernel.ld
 
-prepare:
-	@ rm -rf $(BIN)
-	@ rm -rf $(LIB)
-	@ mkdir -m 777 -p $(BIN)
-	@ mkdir -m 777 -p $(LIB)
-
 # Tools
 CC = clang-16
 ASMC = nasm
@@ -81,4 +75,4 @@ $(LIB)/%_s.o: $(SOURCE)/%.s
 link:
 	@ $(LD) $(LDFLAGS) -o $(BIN)/kernel.elf $(OBJS)
 
-kernel.elf: prepare $(OBJS) link
+kernel.elf: $(OBJS) link
