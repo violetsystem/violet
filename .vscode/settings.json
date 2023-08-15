@@ -70,6 +70,17 @@
         "elf_loader.h": "c",
         "graphics.h": "c",
         "elf.h": "c",
-        "stdbool.h": "c"
+        "stdbool.h": "c",
+        "typeinfo": "c",
+        "khash.h": "c",
+        "hashmap.h": "c",
+        "limits.h": "c",
+        "ksym.h": "c",
+        "cstdio": "c",
+        "stdio.h": "c",
+        "optional": "c",
+        "system_error": "c",
+        "__node_handle": "c",
+        "__memory": "c"
     }
 }

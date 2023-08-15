@@ -6,6 +6,7 @@
 #include <impl/memory.h>
 #include <global/heap.h>
 #include <impl/initrd.h>
+#include <global/ksym.h>
 #include <impl/graphics.h>
 #include <global/scheduler.h>
 #include <global/elf_loader.h>
@@ -29,10 +30,14 @@ void kernel_entry(void) {
     log_print("\n");
 
     arch_stage1();
+
     memory_init();
+
     log_info("memory available = %lu MiB\n", pmm_get_available() / 0x100000);
     log_info("memory reserved  = %lu MiB\n", pmm_get_reserved() / 0x100000);
     log_print("\n");
+
+    ksym_init();
 
     initrd_init();
 

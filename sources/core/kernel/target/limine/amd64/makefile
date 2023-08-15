@@ -5,6 +5,7 @@ override HOME = ../../..
 
 # Project Resources
 SOURCE = $(HOME)/source
+TOOLS = $(HOME)/../../tools
 BIN = bin
 LIB = lib
 
@@ -75,4 +76,7 @@ $(LIB)/%_s.o: $(SOURCE)/%.s
 link:
 	@ $(LD) $(LDFLAGS) -o $(BIN)/kernel.elf $(OBJS)
 
-kernel.elf: $(OBJS) link
+ksym:
+	@ $(TOOLS)/ksym $(BIN)/kernel.elf $(BIN)/kernel.sym
+
+kernel.elf: $(OBJS) link ksym

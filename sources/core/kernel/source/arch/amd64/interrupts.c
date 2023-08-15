@@ -2,6 +2,7 @@
 #include <lib/log.h>
 #include <impl/arch.h>
 #include <impl/panic.h>
+#include <global/ksym.h>
 #include <global/syscall.h>
 #include <global/scheduler.h>
 
@@ -77,7 +78,7 @@ static void dump_backtrace(cpu_context_t* ctx) {
     struct stack_frame* frame = (struct stack_frame*)ctx->rbp;
 
     while (frame) {
-        log_printf("- %p\n", frame->rip);
+        log_printf("- %s(%p)\n", ksym_get_name((void*)frame->rip), frame->rip);
         frame = frame->rbp;
     }
     log_print("\n");

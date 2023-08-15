@@ -15,9 +15,11 @@ liamd/build:
 	@ rm -rf liamd/
 	@ mkdir -m 777 -p liamd/sysroot
 	@ mkdir -m 777 -p liamd/flash/limine
+	@ cd $(SOURCES)/tools && bash build.sh
 	@ $(call info_kernel,"Compiling...")
 	@ make -C "$(KERNEL)/limine/amd64" kernel.elf 
 	@ cp $(KERNEL)/limine/amd64/bin/kernel.elf liamd/flash/
+	@ cp $(KERNEL)/limine/amd64/bin/kernel.sym liamd/flash/
 	@ cd modules/target/amd64/ && bash build.sh
 	@ cp -r modules/target/amd64/bin/. liamd/flash/.
 	@ cp term_wallpaper.bmp liamd/flash/

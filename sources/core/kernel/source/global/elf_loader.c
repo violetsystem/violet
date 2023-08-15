@@ -8,6 +8,7 @@
 #include <global/elf.h>
 #include <impl/initrd.h>
 #include <global/file.h>
+#include <global/ksym.h>
 #include <global/heap.h>
 #include <global/modules.h>
 
@@ -80,8 +81,7 @@ int load_elf_module(int argc, char* args[]){
                     struct elf64_shdr* sh_hdr = (struct elf64_shdr*)(module_address + header.e_shoff + header.e_shentsize * sym_table[y].st_shndx);
                     sym_table[y].st_value = (elf64_addr)sym_table[y].st_value + (elf64_addr)sh_hdr->sh_addr;
                 }else if(sym_table[y].st_shndx == SHN_UNDEF){
-                    // TODO : get kernel symbol with name = (char*)((elf64_addr)sym_names + (elf64_addr)sym_table[y].st_name)
-                    // TODO : sym_table[y].st_value = kernel symbol;
+                    sym_table[y].st_value = (elf64_addr)ksym_find((char*)((elf64_addr)sym_names + (elf64_addr)sym_table[y].st_name));
                 }
 
                 if(sym_table[y].st_name){
@@ -121,6 +121,10 @@ int load_elf_module(int argc, char* args[]){
                         break;
                     }
                     case R_X86_64_PC32:{
+                        *(uint32_t*)target = (uint32_t)symbol_table[ELF64_R_SYM(table[y].r_info)].st_value + (uint32_t)table[y].r_addend - (uint32_t)((uintptr_t)target);
+                        break;
+                    }
+                    case R_X86_64_PLT32:{
                         *(uint32_t*)target = (uint32_t)symbol_table[ELF64_R_SYM(table[y].r_info)].st_value + (uint32_t)table[y].r_addend - (uint32_t)((uintptr_t)target);
                         break;
                     }
