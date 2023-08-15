@@ -86,6 +86,12 @@ typedef elf64_half elf64_versym;
 #define R_X86_64_8		    14	
 #define R_X86_64_PC8		15
 #define R_X86_64_PC64		24
+#define R_X86_64_GOTOFF64   25
+#define R_X86_64_GOTPC32    26
+#define R_X86_64_GOT64      27
+#define R_X86_64_GOTPCREL64 28
+#define R_X86_64_GOTPC64    29
+#define R_X86_64_PLTOFF64   30
 
 #define ELF64_R_SYM(i)	        ((i) >> 32)
 #define ELF64_R_TYPE(i)			((i) & 0xffffffff)

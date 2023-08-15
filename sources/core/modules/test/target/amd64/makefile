@@ -17,8 +17,6 @@ LD = ld.lld-16
 CFLAGS = -I$(SOURCE) \
  		 -I$(KERNEL_SOURCE) \
 		 -ffreestanding \
-		 -fPIC \
-		 -fpie \
 		 --target=x86_64-unknown-none-elf \
 		 -nostdlib \
 		 -fno-stack-protector \
@@ -32,6 +30,7 @@ CFLAGS = -I$(SOURCE) \
 		 -Werror \
 		 -Wstrict-prototypes \
 		 -static \
+		 -mcmodel=large
 
 
 # Recursive Wild Card

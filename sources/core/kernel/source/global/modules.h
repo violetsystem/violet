@@ -4,6 +4,8 @@
 #include <lib/modules/vfs.h>
 
 typedef struct{
+    int (*init)(int argc, char* argv[]);
+	int (*fini)(void);
     char* name;
 }module_metadata_t;
 
