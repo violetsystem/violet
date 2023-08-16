@@ -19,7 +19,6 @@ LD = ld.lld-16
 # Tools Config
 CFLAGS = -I$(SOURCE) \
 		 -ffreestanding \
-		 -fPIC \
 		 -fpie \
 		 --target=x86_64-unknown-none-elf \
 		 -nostdlib \

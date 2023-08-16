@@ -36,5 +36,30 @@ static inline int strncmp(const char *s1, const char *s2, size_t n) {
     return 0;
 }
 
+static inline char* strstr(const char* a, const char* b){
+    size_t n = strlen(b);
+ 
+    while(*a){
+        if(!strncmp(a, b, n)){
+            return (char*)a;
+        }
+        a++;
+    }
+ 
+    return 0;
+}
+
+static inline char* strchr(const char* p, int ch){
+	char c = ch;
+
+	while(*p){
+		if(*p == c){
+			return (char*)p;
+        }
+        p++;
+	}
+
+    return NULL;
+}
 
 #endif

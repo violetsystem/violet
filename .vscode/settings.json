@@ -81,6 +81,10 @@
         "optional": "c",
         "system_error": "c",
         "__node_handle": "c",
-        "__memory": "c"
+        "__memory": "c",
+        "cmath": "cpp",
+        "__nullptr": "cpp",
+        "pci.h": "c",
+        "main.h": "c"
     }
 }

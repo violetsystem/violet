@@ -55,7 +55,7 @@ static bool is_panicking;
 
 static void dump_registers(cpu_context_t* ctx) {
     log_print("REGISTERS : \n");
-    log_printf("rip: %p | rsp: %p\n", ctx->rip, ctx->rsp);
+    log_printf("rip: %s(%p) | rsp: %p\n", ksym_get_name((void*)ctx->rip), ctx->rip, ctx->rsp);
     log_printf("cr2: %p | cr3: %p\n", asm_read_cr2(), ctx->cr3);
     log_printf("cs : %p  | ss : %p | rflags: %p\n", ctx->cs, ctx->ss, ctx->rflags);
 

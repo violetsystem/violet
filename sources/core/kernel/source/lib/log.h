@@ -8,7 +8,7 @@ void log_printv(const char *fmt, va_list args);
 void log_printf(const char *fmt, ...);
 
 static inline void log_error(const char *fmt, ...) {
-    log_print("[kernel] \e[0;31merr:\e[0;37m ");
+    log_print("[kernel] \e[0;31merr:\e[0m ");
     va_list args;
     va_start(args, fmt);
     log_printv(fmt, args);
@@ -16,7 +16,7 @@ static inline void log_error(const char *fmt, ...) {
 }
 
 static inline void log_warning(const char *fmt, ...) {
-    log_print("[kernel] \e[0;33mwrn:\e[0;37m ");
+    log_print("[kernel] \e[0;33mwrn:\e[0m ");
     va_list args;
     va_start(args, fmt);
     log_printv(fmt, args);
@@ -24,7 +24,7 @@ static inline void log_warning(const char *fmt, ...) {
 }
 
 static inline void log_info(const char *fmt, ...) {
-    log_print("[kernel] \e[0;36minf:\e[0;37m ");
+    log_print("[kernel] \e[0;36minf:\e[0m ");
     va_list args;
     va_start(args, fmt);
     log_printv(fmt, args);

@@ -86,7 +86,9 @@ int load_elf_module(int argc, char* args[]){
                     struct elf64_shdr* sh_hdr = (struct elf64_shdr*)(module_address + header.e_shoff + header.e_shentsize * sym_table[y].st_shndx);
                     sym_table[y].st_value = (elf64_addr)sym_table[y].st_value + (elf64_addr)sh_hdr->sh_addr;
                 }else if(sym_table[y].st_shndx == SHN_UNDEF){
-                    sym_table[y].st_value = (elf64_addr)ksym_find((char*)((elf64_addr)sym_names + (elf64_addr)sym_table[y].st_name));
+                    if(sym_table[y].st_name){
+                        sym_table[y].st_value = (elf64_addr)ksym_find((char*)((elf64_addr)sym_names + (elf64_addr)sym_table[y].st_name));
+                    }
                 }
 
                 if(sym_table[y].st_name){
@@ -142,12 +144,10 @@ int load_elf_module(int argc, char* args[]){
     }   
 
     spinlock_release(&load_elf_module_lock);
-    
-    log_printf("Executable file : %s, is a dected as module named : %s\n", args[0], module_data->name);
-
-    module_data->init(0, NULL);
 
     file->close(file);
+    
+    log_printf("Executable file : %s, is successfully dected as a module named : %s\n", args[0], module_data->name);
 
-    return 0;
+    return module_data->init(argc, args);
 }

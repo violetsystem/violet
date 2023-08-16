@@ -1,8 +1,10 @@
 #include <lib/log.h>
 #include <global/modules.h>
 
+#define MODULE_NAME "test"
+
 int init(int argc, char* args[]){
-    log_printf("Hello world from module");
+    log_printf("I am the %s module !!\n", MODULE_NAME);
     return 0;
 }
 
@@ -13,5 +15,5 @@ int fini(void){
 module_metadata_t module_metadata = {
     &init,
     &fini,
-    "test"
+    MODULE_NAME
 };

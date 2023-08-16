@@ -22,7 +22,7 @@ liamd/build:
 	@ cp $(KERNEL)/limine/amd64/bin/kernel.sym liamd/flash/
 	@ cd modules/target/amd64/ && bash build.sh
 	@ cp -r modules/target/amd64/bin/. liamd/flash/.
-	@ cp term_wallpaper.bmp liamd/flash/
+	@ cp -r initrd/. liamd/flash/.
 	@ $(call info_kernel,"done.")
 	@ make -C "$(EXTERN)" limine
 	@ cp limine.cfg $(EXTERN)/limine/limine-bios.sys $(EXTERN)/limine/limine-bios-cd.bin $(EXTERN)/limine/limine-uefi-cd.bin liamd/flash/limine
@@ -40,7 +40,7 @@ ovmf-amd64:
 
 LIAMD_QEMU_FLAGS = \
 	-bios $(EXTERN)/ovmf-amd64/OVMF.fd \
-	-cdrom liamd/boot-violet.iso \
+	-drive file=liamd/boot-violet.iso \
 	-machine q35 \
 	-m 2G \
 	-smp cores=4 \

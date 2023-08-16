@@ -53,6 +53,6 @@ void kernel_entry(void) {
     // memcpy(vmm_get_virtual_address(userspace_page), &test_userspace, PAGE_SIZE);
     // scheduler_launcher_thread(scheduler_create_thread(process, (void*)0x1000, NULL), NULL);
 
-    load_elf_module(1, (char*[]){"/test.ksys"});
+    modules_init();
     arch_idle();
 }
