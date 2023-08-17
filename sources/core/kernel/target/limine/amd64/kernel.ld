@@ -13,28 +13,24 @@ PHDRS
 SECTIONS
 {
     . = 0xffffffff80000000;
+    kernel_start = .;
 
     .text :
     {
-        TEXT_BEGIN = .;
         *(.text*)
-        TEXT_END = .;
     } :text
 
     . += CONSTANT(MAXPAGESIZE);
 
     .rodata : 
     {
-        RODATA_BEGIN = .;
         *(.rodata*)
-        RODATA_END = .;
     } :rodata
 
     . += CONSTANT(MAXPAGESIZE);
 
     .data : 
     {
-        DATA_BEGIN = .;
         *(.data*)
     } :data
 
@@ -44,11 +40,9 @@ SECTIONS
     {
         *(COMMON)
         *(.bss*)
-        DATA_END = .;
     } :data
 
     . += CONSTANT(MAXPAGESIZE);
 
-    KERNEL_SIZE = . - 0xffffffff80000000;
-
+    kernel_end = .;
 }

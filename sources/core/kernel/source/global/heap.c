@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stddef.h>
+#include <lib/log.h>
 #include <impl/vmm.h>
 #include <lib/lock.h>
 #include <lib/math.h>

@@ -9,7 +9,7 @@ static volatile struct limine_hhdm_request hhdm_request = {
     .revision = 0
 };
 
-static volatile struct limine_kernel_address_request kernel_address_request = {
+volatile struct limine_kernel_address_request kernel_address_request = {
     .id = LIMINE_KERNEL_ADDRESS_REQUEST,
     .revision = 0
 };

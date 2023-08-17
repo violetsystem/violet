@@ -40,11 +40,13 @@ void kernel_entry(void) {
     ksym_init();
 
     initrd_init();
-
     /* graphics_init needs memory to be init*/
     graphics_init();
 
     arch_stage2();
+
+    void* test = vmm_get_physical_address(kernel_space, vmm_get_virtual_address((void*)0xb24000));
+    log_printf("%d\n", (uintptr_t)test == (uintptr_t)0xb24000);
 
 
     // process_t* process = scheduler_create_process(PROCESS_SET_FLAG_TYPE(PROCESS_TYPE_APP));
@@ -52,6 +54,8 @@ void kernel_entry(void) {
     // vmm_map(process->vmm_space, (memory_range_t){(void*)0x1000, PAGE_SIZE}, (memory_range_t){userspace_page, PAGE_SIZE}, MEMORY_FLAG_READABLE | MEMORY_FLAG_WRITABLE | MEMORY_FLAG_EXECUTABLE | MEMORY_FLAG_USER);
     // memcpy(vmm_get_virtual_address(userspace_page), &test_userspace, PAGE_SIZE);
     // scheduler_launcher_thread(scheduler_create_thread(process, (void*)0x1000, NULL), NULL);
+    //vmm_map(kernel_space, (memory_range_t){vmm_get_virtual_address(page), 0x1000}, (memory_range_t){page, 0x1000}, MEMORY_FLAG_READABLE | MEMORY_FLAG_WRITABLE);
+
 
     modules_init();
     arch_idle();

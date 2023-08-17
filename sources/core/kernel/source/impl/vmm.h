@@ -26,6 +26,8 @@ int vmm_destroy_space(vmm_space_t space);
 
 int vmm_space_swap(vmm_space_t space);
 
+int vmm_map_page(vmm_space_t space, void* virtual_page, void* physical_page, memory_flags_t flags);
+
 int vmm_map(vmm_space_t space, memory_range_t virtual_range, memory_range_t physical_range, memory_flags_t flags);
 
 int vmm_update_flags(vmm_space_t space, memory_range_t virtual_range, memory_flags_t flags);

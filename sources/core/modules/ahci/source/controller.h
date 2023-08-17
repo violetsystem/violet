@@ -65,7 +65,7 @@ typedef struct{
 typedef struct{
     hba_memory_t* abar;
     uint8_t port_count;
-    device_t* devices[PORT_MAX_COUNT];
+    struct device_t* devices[PORT_MAX_COUNT];
 }ahci_controller_t;
 
 #endif // _MODULE_AHCI_CONTROLLER_H

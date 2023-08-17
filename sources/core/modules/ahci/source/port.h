@@ -2,21 +2,23 @@
 #define _MODULE_AHCI_PORT_H
 
 #define ATA_SECTOR_SIZE                 0x200
-#define ATA_FIS_DRQ                     1 << 3 // Data transfert resquested
-#define ATA_DEV_BUSY                    1 << 7  // Port busy
+#define ATA_FIS_DRQ                     (1 << 3) // Data transfert resquested
+#define ATA_DEV_BUSY                    (1 << 7)  // Port busy
 
-#define HBA_INTERRUPT_STATU_TFE         1 << 30 // Task File Error
+#define HBA_INTERRUPT_STATU_TFE         (1 << 30) // Task File Error
 #define HBA_COMMAND_LIST_MAX_ENTRIES    0x20
 #define HBA_PRDT_ENTRY_MAX_SIZE         0x1000
 #define HBA_MAX_BLOCK_SIZE              0x10000
 #define HBA_PRDT_MAX_ENTRIES            HBA_MAX_BLOCK_SIZE / HBA_PRDT_ENTRY_MAX_SIZE
-#define HBA_COMMAND_TABLE_SIZE          HBA_PRDT_MAX_ENTRIES * sizeof(HBAPRDTEntry_t) + sizeof(HBACommandTable_t)
-#define HBA_PRDT_ENTRY_ADDRESS_SIZE     0x1000
-#define HBA_PRDT_ENTRY_SECTOR_SIZE      HBA_PRDT_ENTRY_ADDRESS_SIZE / ATA_SECTOR_SIZE
+#define HBA_COMMAND_TABLE_SIZE          HBA_PRDT_MAX_ENTRIES * sizeof(hbaprdt_entry_t) + sizeof(hba_command_table_t)
+#define HBA_PRDT_ENTRY_ADDRESS_SIZE     PAGE_SIZE
+#define HBA_PRDT_ENTRY_SECTOR_COUNT     HBA_PRDT_ENTRY_ADDRESS_SIZE / ATA_SECTOR_SIZE
 
 #define ATA_CMD_TIMEOUT                 1000000
 
 #include <stdint.h>
+#include <stddef.h>
+#include <controller.h>
 
 #define ATA_COMMAND_READ_PIO            (0x20)
 #define ATA_COMMAND_READ_DMA            (0x25)
@@ -538,10 +540,21 @@ typedef struct{
     uint8_t check_sum;
 }__attribute__((packed)) identify_info_t;
 
-typedef struct{
-    // hba_port_t* port;
-    // int (*read)(device_t*, uint64_t, size_t);
-    // int (*write)(device_t*, uint64_t, size_t);
-} device_t;
+typedef struct ahci_device_t{
+    size_t size;
+    void* internal_data;
+    int (*read)(struct ahci_device_t*, uint64_t, size_t, void*);
+    int (*write)(struct ahci_device_t*, uint64_t, size_t, void*);
+} ahci_device_t;
+
+typedef struct ahci_sata_device_t {
+    ahci_device_t ahci_device;
+    hba_port_t* port;
+    hba_command_header_t* command_header;
+    hba_command_table_t** command_address_table;
+    uint8_t main_slot;
+    void* identify_info_physical;
+    identify_info_t* identify_info;
+} ahci_sata_device_t;
 
 #endif // _MODULE_AHCI_PORT_H

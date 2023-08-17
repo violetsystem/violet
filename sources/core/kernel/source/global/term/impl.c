@@ -6,11 +6,11 @@
 static struct term_t terminal;
 
 void* alloc_mem(size_t size) {
-   return calloc(size, sizeof(uint8_t));
+    return calloc(size, sizeof(uint8_t));
 }
 
 void free_mem(void *ptr, size_t size) {
-   free(ptr);
+    free(ptr);
 }
 
 void callback(struct term_t* term, uint64_t type, uint64_t gp0, uint64_t gp1, uint64_t gp2) {

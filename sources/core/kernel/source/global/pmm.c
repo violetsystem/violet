@@ -224,14 +224,10 @@ static void pmm_free_page_index(uint64_t index) {
 }
 
 static void pmm_lock_pages_index(uint64_t index, uint64_t page_count) {
-    spinlock_acquire(&pmm_lock);
-
     bitmap_set_bits(pmm_bitmap, index, page_count, true);
 
     available_pages -= page_count;
     used_pages += page_count;
-
-    spinlock_release(&pmm_lock);
 }
 
 static void pmm_lock_page_index(uint64_t index) {
