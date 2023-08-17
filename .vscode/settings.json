@@ -85,6 +85,8 @@
         "cmath": "cpp",
         "__nullptr": "cpp",
         "pci.h": "c",
-        "main.h": "c"
+        "main.h": "c",
+        "storage.h": "c",
+        "mutex": "c"
     }
 }

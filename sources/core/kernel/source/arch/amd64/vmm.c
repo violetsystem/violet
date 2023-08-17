@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <impl/vmm.h>
+#include <lib/lock.h>
 #include <global/pmm.h>
 #include <lib/assert.h>
 #include <arch/include.h>
@@ -35,7 +36,7 @@
 
 void* hhdm_address = NULL;
 vmm_space_t kernel_space = NULL;
-void* vmm_module_address_iteration = NULL;
+void* vmm_free_contiguous_address_iteration = NULL;
 
 typedef uint64_t vmm_entry;
 
@@ -215,7 +216,7 @@ void* vmm_get_physical_address(vmm_space_t space, void* virtual_address) {
         return NULL;
     }
 
-    return VMM_GET_PHYSICAL(*entry);
+    return (void*)((uintptr_t)VMM_GET_PHYSICAL(*entry) + ((uintptr_t)virtual_address % PAGE_SIZE));
 }
 
 int vmm_clear_lower_half_entries(vmm_space_t space) {
@@ -246,15 +247,21 @@ int vmm_preload_higher_half_entries(vmm_space_t space) {
     return 0;
 }
 
-void* vmm_map_module(size_t size){
+static spinlock_t get_free_contiguous_lock = {};
+
+void* vmm_get_free_contiguous(size_t size){
+    spinlock_acquire(&get_free_contiguous_lock);
+
     if(size % PAGE_SIZE){
         size -= size % PAGE_SIZE;
         size += PAGE_SIZE;
     }
 
-    void* return_value = vmm_module_address_iteration;
+    void* return_value = vmm_free_contiguous_address_iteration;
 
-    vmm_module_address_iteration = (void*)((uintptr_t)vmm_module_address_iteration + (uintptr_t)size);
+    vmm_free_contiguous_address_iteration = (void*)((uintptr_t)vmm_free_contiguous_address_iteration + (uintptr_t)size);
+
+    spinlock_release(&get_free_contiguous_lock);
 
     return return_value;
 }

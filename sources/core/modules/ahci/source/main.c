@@ -5,6 +5,7 @@
 #define MODULE_NAME "ahci"
 
 #include <port.c>
+#include <device.c>
 #include <controller.c>
 
 ahci_controller_t** controllers;

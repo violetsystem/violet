@@ -45,9 +45,6 @@ void kernel_entry(void) {
 
     arch_stage2();
 
-    void* test = vmm_get_physical_address(kernel_space, vmm_get_virtual_address((void*)0xb24000));
-    log_printf("%d\n", (uintptr_t)test == (uintptr_t)0xb24000);
-
 
     // process_t* process = scheduler_create_process(PROCESS_SET_FLAG_TYPE(PROCESS_TYPE_APP));
     // void* userspace_page = pmm_allocate_page();

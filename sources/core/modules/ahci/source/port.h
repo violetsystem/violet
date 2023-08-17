@@ -541,7 +541,12 @@ typedef struct{
 }__attribute__((packed)) identify_info_t;
 
 typedef struct ahci_device_t{
-    size_t size;
+    void* block_cache;
+    size_t block_cache_size;
+    size_t alignement;
+    spinlock_t lock;
+    storage_device_t* storage;
+    uint64_t size;
     void* internal_data;
     int (*read)(struct ahci_device_t*, uint64_t, size_t, void*);
     int (*write)(struct ahci_device_t*, uint64_t, size_t, void*);

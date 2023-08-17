@@ -39,12 +39,12 @@ static int sata_find_slot(ahci_sata_device_t* device){
     return -EIO;
 }
 
-static size_t sata_get_size(ahci_sata_device_t* device){
-    size_t size = 0;
+static uint64_t sata_get_size(ahci_sata_device_t* device){
+    uint64_t size = 0;
     if(device->identify_info->extended_number_of_user_addressable_sectors){
-        size = (size_t)device->identify_info->extended_number_of_user_addressable_sectors << 9;
+        size = (uint64_t)(device->identify_info->extended_number_of_user_addressable_sectors << 9);
     }else{
-        size = (size_t)device->identify_info->total_user_addressable_sectors << 9;
+        size = (uint64_t)(device->identify_info->total_user_addressable_sectors << 9);
     }
     return size;
 }
@@ -204,7 +204,6 @@ static int sata_write(ahci_device_t* ahci_device, uint64_t start, size_t size, v
         }
 
         command_table->prdt_entry[i].data_base_address = (uint64_t)vmm_get_physical_address(kernel_space, (void*)((uintptr_t)buffer + (uintptr_t)i * (uintptr_t)HBA_PRDT_ENTRY_ADDRESS_SIZE));
-        log_printf("%p %p\n", buffer + i * HBA_PRDT_ENTRY_ADDRESS_SIZE, command_table->prdt_entry[i].data_base_address);
         command_table->prdt_entry[i].byte_count = (sector_count_to_load << 9) - 1; // 512 bytes per sector
         command_table->prdt_entry[i].interrupt_on_completion = 1; 
         sector_count_iteration -= sector_count_to_load;
@@ -276,7 +275,14 @@ ahci_device_t* init_sata_device(hba_port_t* port){
 
     sata_identify(device);
 
+    device->ahci_device.lock = (spinlock_t){};
+
     device->ahci_device.size = sata_get_size(device);
+
+    device->ahci_device.alignement = ATA_SECTOR_SIZE;
+
+    device->ahci_device.block_cache = vmm_get_free_contiguous(HBA_MAX_BLOCK_SIZE);
+    device->ahci_device.block_cache_size = HBA_MAX_BLOCK_SIZE;
 
     return &device->ahci_device;
 }

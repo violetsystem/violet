@@ -3,9 +3,11 @@
 
 #include <lib/log.h>
 #include <impl/vmm.h>
+#include <lib/lock.h>
 #include <lib/assert.h>
 #include <global/heap.h>
 #include <global/modules.h>
+#include <lib/modules/storage.h>
 
 
 static inline void* ahci_map_physical(void* address, size_t size){

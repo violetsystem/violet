@@ -54,14 +54,14 @@ int load_elf_module(int argc, char* args[]){
 
     spinlock_acquire(&load_elf_module_lock);
 
-    void* module_address = vmm_map_module(file->size);
+    void* module_address = vmm_get_free_contiguous(file->size);
     file->read(module_address, file->size, file);
 
     for(elf64_half i = 0; i < header.e_shnum; i++){
         struct elf64_shdr* section_header = (struct elf64_shdr*)(module_address + header.e_shoff + header.e_shentsize * i);
         
         if(section_header->sh_type == SHT_NOBITS){
-            section_header->sh_addr = (elf64_addr)vmm_map_module(section_header->sh_size);
+            section_header->sh_addr = (elf64_addr)vmm_get_free_contiguous(section_header->sh_size);
             memset((void*)section_header->sh_addr, 0, section_header->sh_size);
         }else{
             section_header->sh_addr = (elf64_addr)(module_address + section_header->sh_offset);

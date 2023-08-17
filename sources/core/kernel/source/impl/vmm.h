@@ -11,7 +11,7 @@ The file in ARCH_INCLUDE(impl/vmm.h) is expected to have :
 #include ARCH_INCLUDE(impl/vmm.h)
 
 extern void* hhdm_address;
-extern void* vmm_module_address_iteration;
+extern void* vmm_free_contiguous_address_iteration;
 extern vmm_space_t kernel_space;
 
 void vmm_init(void);
@@ -38,7 +38,7 @@ int vmm_flush(vmm_space_t space, memory_range_t virtual_range);
 
 void* vmm_get_physical_address(vmm_space_t space, void* virtual_address);
 
-void* vmm_map_module(size_t size);
+void* vmm_get_free_contiguous(size_t size);
 
 static inline void* vmm_get_virtual_address(void* physical_address) {
     return (void*)((uintptr_t)physical_address + (uintptr_t)hhdm_address);

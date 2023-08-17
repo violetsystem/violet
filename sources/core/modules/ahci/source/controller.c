@@ -1,4 +1,5 @@
 #include <main.h>
+#include <device.h>
 
 static uint8_t controller_get_port_type(hba_port_t* port){
     uint32_t sata_status = port->sata_status;
@@ -31,7 +32,8 @@ static void controller_find_ports(ahci_controller_t* controller){
         if(ports_implemented & (1 << i)){
             uint8_t port_type = controller_get_port_type(&controller->abar->ports[i]);
             if(port_type == PORT_TYPE_SATA){
-                init_sata_device(&controller->abar->ports[i]);
+                ahci_device_t* device = init_sata_device(&controller->abar->ports[i]);
+                ahci_init_device(device);
             }
         }
     }
