@@ -33,8 +33,8 @@ static void enumerate_function(pci_device_list_info_t* pci_device_list, void* de
     device_info->is_pcie = true;
     device_info->address = 0; // this is not pci device, it's pcie device
     device_info->configuration_space = pci_device_header;
-    device_info->receive_configuration_space = &receive_configuration_space_pci;
-    device_info->send_configuration_space = &send_configuration_space_pci;
+    device_info->receive_configuration_space = &receive_configuration_space_pcie;
+    device_info->send_configuration_space = &send_configuration_space_pcie;
 
     add_pci_device(pci_device_list, device_info);
 

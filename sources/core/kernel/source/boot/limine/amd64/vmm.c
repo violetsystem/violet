@@ -19,6 +19,8 @@ void vmm_init(void) {
 
     uintptr_t kernel_base = ALIGN_DOWN((uintptr_t)&kernel_start, PAGE_SIZE);
     uintptr_t kernel_top = ALIGN_UP((uintptr_t)&kernel_end, PAGE_SIZE);
+
+    vmm_free_contiguous_address_iteration = (void*)kernel_top;
     
     uintptr_t physical_address = kernel_address_request.response->physical_base;
     for(uintptr_t virtual_address = kernel_base; virtual_address < kernel_top;){

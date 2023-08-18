@@ -556,7 +556,7 @@ typedef struct ahci_sata_device_t {
     ahci_device_t ahci_device;
     hba_port_t* port;
     hba_command_header_t* command_header;
-    hba_command_table_t** command_address_table;
+    hba_command_table_t* command_address_table[HBA_COMMAND_LIST_MAX_ENTRIES];
     uint8_t main_slot;
     void* identify_info_physical;
     identify_info_t* identify_info;

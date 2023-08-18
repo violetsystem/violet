@@ -87,6 +87,10 @@
         "pci.h": "c",
         "main.h": "c",
         "storage.h": "c",
-        "mutex": "c"
+        "mutex": "c",
+        "crc32.h": "c",
+        "vector.h": "c",
+        "partition_interface.h": "c",
+        "fat_types.h": "c"
     }
 }

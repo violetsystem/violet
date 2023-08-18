@@ -14,6 +14,7 @@ int init(int argc, char* args[]){
     log_printf("[module/"MODULE_NAME"] loading start\n");
 
     assert(modules_request_dependency(MODULE_TYPE_PCI) == 0);
+    assert(modules_request_dependency(MODULE_TYPE_STORAGE) == 0);
 
     pci_device_info_t device_info = {
         PCI_SEARCH_NO_PARAMETER,
@@ -43,5 +44,6 @@ int fini(void){
 module_metadata_t module_metadata = {
     &init,
     &fini,
+    MODULE_TYPE_UNDEFINE,
     MODULE_NAME
 };

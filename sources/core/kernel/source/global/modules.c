@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stddef.h>
 #include <lib/log.h>
 #include <lib/string.h>
@@ -7,13 +8,16 @@
 #include <global/modules.h>
 #include <global/elf_loader.h>
 
-vfs_t* vfs_handler = NULL;
-pci_t* pci_handler = NULL;
+volatile vfs_t* vfs_handler = NULL;
+volatile pci_t* pci_handler = NULL;
+volatile storage_t* storage_handler = NULL;
+
+static module_flags_t modules_flags[MODULE_TYPE_COUNT];
 
 static const char* modules_cfg_path = "/modules.cfg";
 
 void modules_init(void){
-    file_t* file = vfs_handler->open(modules_cfg_path, 0);
+    file_t* file = open(modules_cfg_path, 0);
     if(file != NULL){
         void* buffer = malloc(file->size);
         file->read(buffer, file->size, file);
@@ -31,17 +35,44 @@ void modules_init(void){
 
             if(strstr(current_line, "MODULE_PATH=")){
                 char* args[2] = {data, NULL};
-                load_elf_module(1, args);
+                module_metadata_t* module_metadata = NULL;
+                if(!load_elf_module(&module_metadata, 1, args)){
+                    modules_set_load_state(module_metadata->type, true);
+                }else if(module_metadata != NULL){
+                    modules_set_load_state(module_metadata->type, false);
+                }
             }
 
         }
         free(buffer);
+        file->close(file);
     }else{
         panic("%s not found !", modules_cfg_path);
     }
 }
 
 int modules_request_dependency(module_type_t type){
-    // TODO
+    if(type >= MODULE_TYPE_COUNT){
+        return EINVAL;
+    }
+    while(!(modules_flags[type] & MODULE_FLAGS_LOADED)){
+        // TODO : Wait
+        panic("modules_request_dependency : module type %d isn't loaded yet !", type);
+    }
     return 0;
 }
+
+int modules_set_load_state(module_type_t type, bool value){
+    if(type >= MODULE_TYPE_COUNT){
+        return EINVAL;
+    }
+
+    if(value){
+        modules_flags[type] |= MODULE_FLAGS_LOADED;
+    }else{
+        modules_flags[type] &= ~MODULE_FLAGS_LOADED;
+    }
+
+    return 0;
+}
+

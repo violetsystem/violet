@@ -28,19 +28,15 @@ liamd/build:
 	@ cp limine.cfg $(EXTERN)/limine/limine-bios.sys $(EXTERN)/limine/limine-bios-cd.bin $(EXTERN)/limine/limine-uefi-cd.bin liamd/flash/limine
 	@ mkdir -p liamd/flash/EFI/BOOT
 	@ cp $(EXTERN)/limine/BOOTX64.EFI liamd/flash/EFI/BOOT/
-	@ xorriso -as mkisofs -b limine/limine-bios-cd.bin \
-		-no-emul-boot -boot-load-size 4 -boot-info-table \
-		--efi-boot limine/limine-uefi-cd.bin \
-		-efi-boot-part --efi-boot-image --protective-msdos-label \
-		liamd/flash/ -o liamd/boot-violet.iso
-	@ $(EXTERN)/limine/limine bios-install liamd/boot-violet.iso
+	@ bash liamd-disk.sh
 
+	
 ovmf-amd64:
 	@ make -C "$(EXTERN)" ovmf-amd64
 
 LIAMD_QEMU_FLAGS = \
 	-bios $(EXTERN)/ovmf-amd64/OVMF.fd \
-	-drive file=liamd/boot-violet.iso \
+	-drive file=liamd/boot-violet.hdd \
 	-machine q35 \
 	-m 2G \
 	-smp cores=4 \

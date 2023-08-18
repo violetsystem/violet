@@ -101,4 +101,6 @@ void ahci_init_device(ahci_device_t* device){
     device->storage->internal_data = device;
     device->storage->read = &ahci_device_read;
     device->storage->write = &ahci_device_write;
+
+    storage_handler->add_storage_device(device->storage);
 }

@@ -1,3 +1,4 @@
+#include <lib/log.h>
 #include <impl/vmm.h>
 #include <lib/lock.h>
 #include <global/pmm.h>

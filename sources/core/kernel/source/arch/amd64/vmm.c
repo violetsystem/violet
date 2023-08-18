@@ -263,5 +263,9 @@ void* vmm_get_free_contiguous(size_t size){
 
     spinlock_release(&get_free_contiguous_lock);
 
+    for(size_t i = 0; i < size; i += PAGE_SIZE){
+        vmm_map_page(kernel_space, (void*)((uintptr_t)return_value + (uintptr_t)i), pmm_allocate_page(), MEMORY_FLAG_READABLE | MEMORY_FLAG_WRITABLE | MEMORY_FLAG_EXECUTABLE);
+    }
+
     return return_value;
 }

@@ -15,5 +15,6 @@ int fini(void){
 module_metadata_t module_metadata = {
     &init,
     &fini,
+    MODULE_TYPE_UNDEFINE,
     MODULE_NAME
 };

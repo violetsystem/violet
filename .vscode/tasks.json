@@ -7,7 +7,7 @@
                 "--",
                 "sh",
                 "-c",
-                "bash -c \"cd ${workspaceFolder}/target && make liamd/debug\""
+                "bash -c \"cd ${workspaceFolder}/target && sudo make liamd/debug\""
             ]
         }
     ],

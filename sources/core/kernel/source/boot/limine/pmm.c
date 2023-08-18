@@ -1,6 +1,7 @@
 #include <global/pmm.h>
 #include <boot/limine.h>
 
+#include <lib/log.h>
 #include <impl/vmm.h>
 #include <lib/math.h>
 #include <lib/assert.h>
@@ -57,8 +58,6 @@ void pmm_init(void) {
     size_t memory_size = pmm_get_memory_size(memory_info);
 
     size_t total_page_count = DIV_ROUNDUP((size_t)memory_end, PAGE_SIZE);
-
-    vmm_free_contiguous_address_iteration = (void*)((uintptr_t)vmm_get_virtual_address(memory_end) + (uintptr_t)PAGE_SIZE);
 
     available_pages = 0;
     used_pages = 0;

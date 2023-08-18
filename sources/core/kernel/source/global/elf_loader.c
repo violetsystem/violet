@@ -23,7 +23,7 @@ static bool check_elf_signature(struct elf64_ehdr* header){
 
 static spinlock_t load_elf_module_lock;
 
-int load_elf_module(int argc, char* args[]){
+int load_elf_module(module_metadata_t** metadata, int argc, char* args[]){
     file_t* file = open(args[0], 0);
 
     if(file == NULL){
@@ -148,6 +148,8 @@ int load_elf_module(int argc, char* args[]){
     file->close(file);
     
     log_printf("Executable file : %s, is successfully dected as a module named : %s\n", args[0], module_data->name);
+
+    *metadata = module_data;
 
     return module_data->init(argc, args);
 }
