@@ -40,11 +40,11 @@ int new_partition(storage_device_t* device, uint64_t start, uint64_t size, guid_
 int add_potential_owner_storage(storage_potential_owner_t* potential_owner);
 int remove_potential_owner_storage(storage_potential_owner_t* potential_owner);
 
-static inline uint64_t convert_bytes_to_lba(uint64_t value){
+static inline uint64_t bytes_to_lba(uint64_t value){
     return value >> 9;
 }
 
-static inline uint64_t convert_lba_to_bytes(uint64_t value){
+static inline uint64_t lba_to_bytes(uint64_t value){
     return value << 9;
 }
 

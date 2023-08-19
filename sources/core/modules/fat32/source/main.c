@@ -1,10 +1,11 @@
 #include <lib/log.h>
 #include <lib/assert.h>
+#include <global/heap.h>
 #include <global/modules.h>
 
 #define MODULE_NAME "fat32"
 
-#include <fat32.c>
+#include <core.c>
 #include <interface.c>
 
 int init(int argc, char* args[]){

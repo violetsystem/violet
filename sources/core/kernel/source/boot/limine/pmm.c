@@ -44,7 +44,13 @@ static struct limine_memmap_entry* pmm_find_free_entry(struct limine_memmap_resp
     for(uint64_t i = 0; i < memory_info->entry_count; i++) {
         if(memory_info->entries[i]->type == LIMINE_MEMMAP_USABLE) {
             if(memory_info->entries[i]->length >= minimum_size) {
-                return memory_info->entries[i];
+                if(memory_info->entries[i]->base < TRAMPOLINE_END){
+                    if(memory_info->entries[i]->length - (TRAMPOLINE_END - memory_info->entries[i]->base) >= minimum_size){
+                        return memory_info->entries[i];
+                    }
+                }else{
+                    return memory_info->entries[i];
+                }
             }
         }
     }   
@@ -70,25 +76,37 @@ void pmm_init(void) {
 
     assert(bitmap_memmap_entry);
 
-    pmm_init_bitmap(vmm_get_virtual_address((void*)bitmap_memmap_entry->base), bitmap_size, true); /* Reserve all pages */
+    void* bitmap_base;
+    if(bitmap_memmap_entry->base < TRAMPOLINE_END){
+        bitmap_base = (void*)TRAMPOLINE_END;
+    }else{
+        bitmap_base = (void*)bitmap_memmap_entry->base;
+    }
+
+    pmm_init_bitmap(vmm_get_virtual_address(bitmap_base), bitmap_size, true); /* Reserve all pages */
 
     for(uint64_t i = 0; i < memory_info->entry_count; i++) {
-        if(memory_info->entries[i] != bitmap_memmap_entry) {
-            if(memory_info->entries[i]->type == LIMINE_MEMMAP_USABLE) {
-                pmm_unreserve_pages((void*)memory_info->entries[i]->base, memory_info->entries[i]->length / PAGE_SIZE);
+        if(memory_info->entries[i]->type == LIMINE_MEMMAP_USABLE) {
+            uintptr_t base = (uintptr_t)memory_info->entries[i]->base;
+            uint64_t size = memory_info->entries[i]->length;
+            if(base <= TRAMPOLINE_END){
+                size = size - (TRAMPOLINE_END - memory_info->entries[i]->base);
+                base = TRAMPOLINE_END;
             }
-        }else{
-            if(memory_info->entries[i]->length != bitmap_size) {
-                uintptr_t bitmap_end_rounded_to_page = memory_info->entries[i]->base + bitmap_size;
-                
-                if(bitmap_end_rounded_to_page % PAGE_SIZE) {
-                    bitmap_end_rounded_to_page -= bitmap_end_rounded_to_page % PAGE_SIZE;
-                    bitmap_end_rounded_to_page += PAGE_SIZE;
-                }
+            if(memory_info->entries[i] != bitmap_memmap_entry) {
+                pmm_unreserve_pages((void*)base, size / PAGE_SIZE);
+            }else{
+                if(memory_info->entries[i]->length != bitmap_size) {
+                    uintptr_t bitmap_end_rounded_to_page = base + bitmap_size;
+                    
+                    if(bitmap_end_rounded_to_page % PAGE_SIZE) {
+                        bitmap_end_rounded_to_page -= bitmap_end_rounded_to_page % PAGE_SIZE;
+                        bitmap_end_rounded_to_page += PAGE_SIZE;
+                    }
 
-                pmm_unreserve_pages((void*)bitmap_end_rounded_to_page, (memory_info->entries[i]->length - bitmap_size) / PAGE_SIZE);
+                    pmm_unreserve_pages((void*)bitmap_end_rounded_to_page, (memory_info->entries[i]->length - bitmap_size) / PAGE_SIZE);
+                }
             }
         }
     }
-    pmm_reserve_pages((void*)TRAMPOLINE_ADDRESS, TRAMPOLINE_SIZE / PAGE_SIZE);
 }

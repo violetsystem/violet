@@ -14,6 +14,7 @@
 
 #define TRAMPOLINE_ADDRESS              0x1000
 #define TRAMPOLINE_SIZE                 0x1000
+#define TRAMPOLINE_END                  TRAMPOLINE_ADDRESS + TRAMPOLINE_SIZE
 
 struct entry_record{
     uint8_t type;

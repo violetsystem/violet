@@ -23,14 +23,14 @@ static int load_gpt_header(device_partitions_t* device_partitions){
 
     assert(device_partitions->mbr_header != NULL);
     uint64_t gpt_header_lba_start = device_partitions->mbr_header->partition_record[0].starting_lba;
-    device_partitions->device->read(device_partitions->device, convert_lba_to_bytes(gpt_header_lba_start), sizeof(gpt_header_t), (void*)device_partitions->gpt_header);
+    device_partitions->device->read(device_partitions->device, lba_to_bytes(gpt_header_lba_start), sizeof(gpt_header_t), (void*)device_partitions->gpt_header);
     if(device_partitions->gpt_header->my_lba != gpt_header_lba_start){
         return EINVAL;
     }
     int gpt_header_status = check_gpt_header(device_partitions->gpt_header);
     // load recovery header
     gpt_header_t* recovery_gpt_header = (gpt_header_t*)malloc(sizeof(gpt_header_t));
-    device_partitions->device->read(device_partitions->device, convert_lba_to_bytes(device_partitions->gpt_header->alternate_lba), sizeof(gpt_header_t), (void*)recovery_gpt_header);
+    device_partitions->device->read(device_partitions->device, lba_to_bytes(device_partitions->gpt_header->alternate_lba), sizeof(gpt_header_t), (void*)recovery_gpt_header);
     int gpt_recovery_header_status = check_gpt_header(recovery_gpt_header);
 
     if(gpt_header_status){
@@ -44,10 +44,10 @@ static int load_gpt_header(device_partitions_t* device_partitions){
             recovery_gpt_header->header_crc32 = partition_crc32(0, (char*)recovery_gpt_header, sizeof(gpt_header_t));
 
             // update gpt header into the disk
-            device_partitions->device->write(device_partitions->device, convert_lba_to_bytes(gpt_header_lba_start), sizeof(gpt_header_t), (void*)recovery_gpt_header);
+            device_partitions->device->write(device_partitions->device, lba_to_bytes(gpt_header_lba_start), sizeof(gpt_header_t), (void*)recovery_gpt_header);
 
             // update gpt header
-            device_partitions->device->read(device_partitions->device, convert_lba_to_bytes(gpt_header_lba_start), sizeof(gpt_header_t), (void*)device_partitions->gpt_header);
+            device_partitions->device->read(device_partitions->device, lba_to_bytes(gpt_header_lba_start), sizeof(gpt_header_t), (void*)device_partitions->gpt_header);
         }else{
             free(recovery_gpt_header);
             return EINVAL;
@@ -61,7 +61,7 @@ static int load_gpt_header(device_partitions_t* device_partitions){
         recovery_gpt_header->header_crc32 = partition_crc32(0, (char*)recovery_gpt_header, sizeof(gpt_header_t));
 
         // update gpt recovery header into the disk
-        device_partitions->device->write(device_partitions->device, convert_lba_to_bytes(gpt_header_lba_start), sizeof(gpt_header_t), (void*)recovery_gpt_header);
+        device_partitions->device->write(device_partitions->device, lba_to_bytes(gpt_header_lba_start), sizeof(gpt_header_t), (void*)recovery_gpt_header);
     }
 
     if(!gpt_header_status){
@@ -80,7 +80,7 @@ static uint64_t check_partitions(device_partitions_t* device_partitions){
 
     // check recovery 
     gpt_partition_entry_t* gpt_partition_entries_recovery = (gpt_partition_entry_t*)malloc(size_of_partition_list);
-    uint64_t pgt_partition_entries_revory_location = convert_lba_to_bytes(device_partitions->gpt_header->alternate_lba) - size_of_partition_list;
+    uint64_t pgt_partition_entries_revory_location = lba_to_bytes(device_partitions->gpt_header->alternate_lba) - size_of_partition_list;
     device_partitions->device->read(device_partitions->device, pgt_partition_entries_revory_location, size_of_partition_list, gpt_partition_entries_recovery);
     uint32_t crc32_recovery_header_compute = partition_crc32(0, (char*)gpt_partition_entries_recovery, size_of_partition_list);
 
@@ -94,10 +94,10 @@ static uint64_t check_partitions(device_partitions_t* device_partitions){
     }else{
         if(device_partitions->gpt_header->partition_entry_array_crc32 == crc32_recovery_header_compute){
             // update gpt partition entries into the disk
-            device_partitions->device->write(device_partitions->device, convert_lba_to_bytes(device_partitions->gpt_header->partition_entry_lba), size_of_partition_list, gpt_partition_entries_recovery);
+            device_partitions->device->write(device_partitions->device, lba_to_bytes(device_partitions->gpt_header->partition_entry_lba), size_of_partition_list, gpt_partition_entries_recovery);
 
             // update entries
-            device_partitions->device->read(device_partitions->device, convert_lba_to_bytes(device_partitions->gpt_header->partition_entry_lba), size_of_partition_list, device_partitions->gpt_partition_entries);
+            device_partitions->device->read(device_partitions->device, lba_to_bytes(device_partitions->gpt_header->partition_entry_lba), size_of_partition_list, device_partitions->gpt_partition_entries);
 
             free(gpt_partition_entries_recovery);
             return 0;
@@ -119,12 +119,12 @@ int load_gpt_partitions(device_partitions_t* device_partitions){
     assert(device_partitions->gpt_partition_entries == NULL);
     device_partitions->gpt_partition_entries = (gpt_partition_entry_t*)malloc(size_of_partition_list);
 
-    device_partitions->device->read(device_partitions->device, convert_lba_to_bytes(device_partitions->gpt_header->partition_entry_lba), size_of_partition_list, device_partitions->gpt_partition_entries);
+    device_partitions->device->read(device_partitions->device, lba_to_bytes(device_partitions->gpt_header->partition_entry_lba), size_of_partition_list, device_partitions->gpt_partition_entries);
     if(!check_partitions(device_partitions)){
         device_partitions->is_gpt_partitions_loaded = true;
         for(uint64_t i = 0; i < device_partitions->gpt_header->number_of_partition_entries; i++){
-            uint64_t start = convert_lba_to_bytes(device_partitions->gpt_partition_entries[i].starting_lba);
-            uint64_t size = convert_lba_to_bytes(device_partitions->gpt_partition_entries[i].ending_lba - device_partitions->gpt_partition_entries[i].starting_lba);
+            uint64_t start = lba_to_bytes(device_partitions->gpt_partition_entries[i].starting_lba);
+            uint64_t size = lba_to_bytes(device_partitions->gpt_partition_entries[i].ending_lba - device_partitions->gpt_partition_entries[i].starting_lba);
             if(size != 0){
                 new_partition(device_partitions->device, start, size, &device_partitions->gpt_partition_entries[i].partition_type_guid);
             }

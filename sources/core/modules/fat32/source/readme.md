@@ -1,1 +1,0 @@
-# This directory is the implementation of https://github.com/strawberryhacker/fat32 
