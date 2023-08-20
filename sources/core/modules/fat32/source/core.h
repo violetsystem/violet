@@ -2,6 +2,10 @@
 #define _MODULE_FAT32_CORE_H
 
 #include <errno.h>
+#include <lib/memory.h>
+#include <lib/string.h>
+
+#define ENTRY_SIZE 32
 
 typedef struct{
     uint8_t jump[3];
@@ -46,7 +50,7 @@ typedef struct{
 }__attribute__((packed)) fat_attributes_t;
 
 typedef struct{
-    char name[11];
+    uint8_t name[11];
     fat_attributes_t attributes;
     uint8_t flags;
     uint8_t time_resolution;
@@ -61,6 +65,17 @@ typedef struct{
 }__attribute__((packed)) fat_directory_t;
 
 typedef struct{
+    uint8_t order;
+    uint16_t name1[5];
+    fat_attributes_t attributes;
+    uint8_t lfnType;
+    uint8_t checksum;
+    uint16_t name2[6];
+    uint16_t reserved;
+    uint16_t name3[2];
+}__attribute__((packed)) fat_lfn_t;
+
+typedef struct{
     void* volume;
     uint64_t start;
     uint64_t size;
@@ -72,6 +87,7 @@ typedef struct{
     uint32_t* fat;
     uint64_t first_usable_lba;
     uint64_t cluster_size;
+    uint64_t entries_per_cluster;
     partition_t* partition;
 } fat_context_t;
 

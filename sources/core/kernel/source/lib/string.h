@@ -62,4 +62,12 @@ static inline char* strchr(const char* p, int ch){
     return NULL;
 }
 
+static inline char to_lower(char c){
+    if(c >= 'A' && c <= 'Z'){
+        return c + 32;
+    }
+
+    return c;
+}
+
 #endif
