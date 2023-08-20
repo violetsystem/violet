@@ -92,7 +92,15 @@ typedef struct{
 } fat_context_t;
 
 typedef struct{
-
-} file_internal_t;
+    uint16_t creation_time;
+    uint16_t creation_date;
+    uint16_t last_access_date;
+    uint16_t last_write_time;
+    uint16_t last_write_date;
+    uint32_t cluster;
+    uint32_t size;
+    char* path;
+    fat_context_t* ctx;
+} fat_file_internal_t;
 
 #endif // _MODULE_FAT32_CORE_H

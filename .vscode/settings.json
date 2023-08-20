@@ -91,6 +91,7 @@
         "crc32.h": "c",
         "vector.h": "c",
         "partition_interface.h": "c",
-        "fat_types.h": "c"
+        "fat_types.h": "c",
+        "memory": "c"
     }
 }
