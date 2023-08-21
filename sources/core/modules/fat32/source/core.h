@@ -11,6 +11,10 @@
 
 #define END_OF_CLUSTERCHAIN         (0x0FFFFFFF)
 
+#define FSI_LEAD_SIGNATURE          (0x41615252)
+#define FSI_STRUCT_SIGNATURE        (0x61417272)
+#define FSI_TRAIL_SIGNATURE         (0xAA550000)
+
 typedef struct{
     uint8_t jump[3];
     uint8_t oem[8];
