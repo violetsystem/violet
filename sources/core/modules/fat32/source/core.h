@@ -44,12 +44,13 @@ typedef struct{
 }__attribute__((packed)) bpb_t;
 
 typedef struct{
-    uint32_t fsi_signature;
-    uint8_t reserved1[400];
+    uint32_t lead_signature;
+    uint8_t reserved1[480];
     uint32_t struct_signature;
     uint32_t free_cluster_count;
     uint32_t next_free_cluster;
     uint8_t reserved2[12];
+    uint32_t trail_signature;
 }__attribute__((packed)) fs_info_t;
 
 typedef struct{

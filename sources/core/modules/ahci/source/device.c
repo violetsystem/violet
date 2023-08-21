@@ -32,13 +32,14 @@ static inline void ahci_device_read_prepare(ahci_device_t* device, size_t* size_
 static inline void ahci_device_write_prepare(ahci_device_t* device, size_t* size_to_process, uint64_t* write_position, uintptr_t* buffer_position){
     size_t size_processing;
     uint64_t alignement_offset = *write_position % (uint64_t)device->alignement;
+    uint64_t start = *write_position - alignement_offset;
 
     if(alignement_offset){
         size_processing = device->alignement - alignement_offset;
         if(size_processing > *size_to_process){
             size_processing = *size_to_process;
         }
-        ahci_device_read(device->storage, *write_position, alignement_offset, device->block_cache);
+        ahci_device_read(device->storage, start, alignement_offset, device->block_cache);
     }else{
         size_processing = *size_to_process;
     }
@@ -48,12 +49,21 @@ static inline void ahci_device_write_prepare(ahci_device_t* device, size_t* size
         size_processing = device->block_cache_size;
     }else{
         uint64_t alignement_offset_end = (*write_position + size_processing) % (uint64_t)device->alignement;
-        ahci_device_read(device->storage, *write_position + size_processing, device->alignement - alignement_offset_end, (void*)((uintptr_t)device->block_cache + (uintptr_t)alignement_offset_end));
+        if(alignement_offset_end){
+            ahci_device_read(device->storage, *write_position + size_processing, device->alignement - alignement_offset_end, (void*)((uintptr_t)device->block_cache + (uintptr_t)alignement_offset_end));
+        }
     }
 
     spinlock_acquire(&device->lock);
     memcpy(device->block_cache + alignement_offset, (void*)*buffer_position, size_processing);
-    device->write(device, *write_position - alignement_offset, size_processing, device->block_cache);
+
+    size_t size_to_write = alignement_offset + size_processing;
+    if(size_to_write % device->alignement){
+        size_to_write -= size_to_write % device->alignement;
+        size_to_write += device->alignement;
+    }
+    
+    device->write(device, start, size_processing, device->block_cache);
     spinlock_release(&device->lock);
 
     *buffer_position += (uintptr_t)size_processing;

@@ -42,7 +42,24 @@ static int fat_read_boot_sector(fat_context_t* ctx){
 }
 
 static int fat_read_fs_info_sector(fat_context_t* ctx){
-    return read_partition(ctx->partition, lba_to_bytes(ctx->bpb->sector_number_fs_info), sizeof(fs_info_t), ctx->fsi);
+    int err = read_partition(ctx->partition, lba_to_bytes(ctx->bpb->sector_number_fs_info), sizeof(fs_info_t), ctx->fsi);
+    if(err){
+        return err;
+    }
+    
+    if(ctx->fsi->lead_signature != 0x41615252){
+        return EINVAL;
+    }
+
+    if(ctx->fsi->struct_signature != 0x61417272){
+        return EINVAL;
+    }
+
+    if(ctx->fsi->trail_signature != 0xAA550000){
+        return EINVAL;
+    }
+
+    return 0;
 }
 
 static int fat_write_fs_info_sector(fat_context_t* ctx){
@@ -74,7 +91,7 @@ static int fat_allocate_cluster(fat_context_t* ctx, uint32_t* cluster){
         if((fat_get_next_cluster(ctx, i)) == 0){
             fat_set_next_cluster(ctx, i, END_OF_CLUSTERCHAIN);
             ctx->next_free_cluster = i;
-            ctx->fsi->free_cluster_count++;
+            ctx->fsi->free_cluster_count--;
             fat_write_fs_info_sector(ctx);
             spinlock_release(&fat_allocate_cluster_lock);
             *cluster = i;
@@ -88,7 +105,7 @@ static int fat_allocate_cluster(fat_context_t* ctx, uint32_t* cluster){
 static int fat_free_all_following_clusters(fat_context_t* ctx, uint32_t cluster){
     uint32_t next_cluster = fat_get_next_cluster(ctx, cluster);
     fat_set_next_cluster(ctx, cluster, 0);
-    ctx->fsi->free_cluster_count--;
+    ctx->fsi->free_cluster_count++;
     fat_write_fs_info_sector(ctx);
     if(next_cluster < 0x0FFFFFF8){
         return fat_free_all_following_clusters(ctx, next_cluster);
@@ -167,11 +184,14 @@ static int fat_write_cluster_chain(fat_context_t* ctx, uint32_t current_cluster,
         if(alignement + size_to_write > ctx->cluster_size){
             size_to_write = ctx->cluster_size - alignement;
         }
-        assert(!fat_write_cluster(ctx, current_cluster, alignement, size_to_write, (void*)buffer_iteration));
-        alignement -= size_to_write;
+        if(size_to_write){
+            assert(!fat_write_cluster(ctx, current_cluster, alignement, size_to_write, (void*)buffer_iteration));
+        }
+        alignement = 0;
     }else{
         alignement -= ctx->cluster_size;
     }
+
     
 
     size -= size_to_write;
@@ -249,69 +269,92 @@ static int fat_parse_sfn(char* name, fat_directory_t* dir){
     return 0;
 }
 
-static int fat_read_entry(fat_context_t* ctx, uint32_t cluster, uint32_t entry_number, void* buffer){
-    return fat_read_cluster(ctx, cluster, entry_number * ENTRY_SIZE, ENTRY_SIZE, buffer);
+static int fat_read_one_entry(fat_context_t* ctx, uint32_t cluster, uint32_t entry_number, fat_directory_t* dir){
+    return fat_read_cluster(ctx, cluster, entry_number * ENTRY_SIZE, ENTRY_SIZE, dir);
 }
 
-static fat_directory_t* fat_find_entry_recursive(fat_context_t* ctx, uint32_t current_cluster, const char* name, void* cluster_buffer, char* last_entry_name, bool last_entry_lfn, uint64_t* sfn_position, uint64_t* lfn_position){
-    /* read current cluster */
-    assert(!fat_read_cluster(ctx, current_cluster, 0, ctx->cluster_size, (void*)cluster_buffer));
+static fat_directory_t* fat_read_entry_with_cache(fat_context_t* ctx, uint32_t cluster_base, uint32_t entry_number, void* cluster_buffer, uint32_t* cluster_cache_id_count_from_base, uint32_t* last_cluster_read){
+    uint32_t cluster_count_from_base = entry_number / ctx->entries_per_cluster;
 
-    /* parse the current cluster */
-    char entry_name[256];
-    if(last_entry_name == NULL){
-        last_entry_name = (char*)&entry_name;
+    /* Caching system */
+    if(cluster_count_from_base != *cluster_cache_id_count_from_base - 1){ // we begin to one
+        *cluster_cache_id_count_from_base -= 1; // we begin to one
+        uint32_t cluster;
+        uint32_t cluster_index;
+
+        if(*cluster_cache_id_count_from_base && cluster_count_from_base > *cluster_cache_id_count_from_base){
+            cluster = *last_cluster_read;
+            cluster_index = *cluster_cache_id_count_from_base;
+        }else{
+            cluster = cluster_base;
+            cluster_index = 0;
+        }
+
+        for(; cluster_index < cluster_count_from_base; cluster_index++){
+            cluster = fat_get_next_cluster(ctx, cluster);
+            if(cluster >= 0xFFFFFF8 || cluster == 0){
+                return NULL;
+            }
+        }
+
+        fat_read_cluster(ctx, cluster, 0, ctx->cluster_size, cluster_buffer);
+        *cluster_cache_id_count_from_base = cluster_count_from_base + 1; // we begin to one
+        *last_cluster_read = cluster;
     }
-    for(uint64_t i = 0; i < ctx->entries_per_cluster; i++){
-        fat_directory_t* dir = (fat_directory_t*)((uintptr_t)cluster_buffer + (uintptr_t)i * (uintptr_t)ENTRY_SIZE);
+
+    /* Read entry from cache */
+    uint32_t entry_number_in_cluster = entry_number % ctx->entries_per_cluster;
+    return (fat_directory_t*)((uintptr_t)cluster_buffer + (uintptr_t)entry_number_in_cluster * (uintptr_t)ENTRY_SIZE);
+}
+
+static fat_directory_t* fat_find_entry(fat_context_t* ctx, uint32_t current_cluster, const char* name, void* cluster_buffer, uint64_t* sfn_position, uint64_t* lfn_position){
+    char entry_name[256];
+
+    uint64_t last_entry_lfn = 0;
+
+    uint32_t cluster_cache_id_count_from_base = 0;
+    uint32_t last_cluster_read = 0;
+
+    uint32_t entry_index = 0;
+
+    fat_directory_t* dir;
+    while((dir = fat_read_entry_with_cache(ctx, current_cluster, entry_index, cluster_buffer, &cluster_cache_id_count_from_base, &last_cluster_read)) != NULL){
         if(fat_entry_valid(dir)){
             if(fat_is_lfn(dir)){
                 fat_lfn_t* lfn = (fat_lfn_t*)dir;
                 uint8_t order = lfn->order & ~0x40;
 
-                last_entry_name[13 * (order - 1)] = '\0';
-
                 for(uint8_t y = 0; y < order; y++){
-                    lfn = (fat_lfn_t*)((uintptr_t)cluster_buffer + (uintptr_t)(i + y) * (uintptr_t)ENTRY_SIZE);
-                    fat_parse_lfn(&last_entry_name[13 * (order - 1 - y)], lfn);
+                    lfn = (fat_lfn_t*)fat_read_entry_with_cache(ctx, current_cluster, entry_index + y, cluster_buffer, &cluster_cache_id_count_from_base, &last_cluster_read);
+                    fat_parse_lfn(&entry_name[13 * (order - 1 - y)], lfn);
                 }
 
-                i += order - 1;
+                entry_index += order - 1;
 
-                last_entry_lfn = lba_to_bytes(cluster_to_lba(ctx, current_cluster)) + i * ENTRY_SIZE;
-
-                continue;
+                last_entry_lfn = lba_to_bytes(cluster_to_lba(ctx, last_cluster_read)) + (entry_index % ctx->entries_per_cluster) * ENTRY_SIZE;
             }else{
                 if(!last_entry_lfn){
-                    fat_parse_sfn(last_entry_name, dir);
+                    fat_parse_sfn(entry_name, dir);
                 }else{
                     last_entry_lfn = 0;
                 }
-            }
-
-            if(!strcmp(name, last_entry_name)){
-                if(sfn_position != NULL){
-                    *sfn_position = lba_to_bytes(cluster_to_lba(ctx, current_cluster)) + i * ENTRY_SIZE;
-                }
-                if(lfn_position != NULL){
-                    *lfn_position = last_entry_lfn;
-                }
-                return dir;
+                // Only sfn entry can be return because lfn are just use to store string not the entry data
+                if(!strcmp(name, entry_name)){
+                    if(sfn_position != NULL){
+                        *sfn_position = lba_to_bytes(cluster_to_lba(ctx, last_cluster_read)) + (entry_index % ctx->entries_per_cluster) * ENTRY_SIZE;
+                    }
+                    if(lfn_position != NULL){
+                        *lfn_position = last_entry_lfn;
+                    }
+                    return dir;
+                }            
             }
         }
+        
+        entry_index++;
     }
 
-    /* find next cluster */
-    uint32_t next_cluster = fat_get_next_cluster(ctx, current_cluster);
-    if(next_cluster >= 0xFFFFFF8 || next_cluster == 0){
-        return NULL;
-    }else{
-        return fat_find_entry_recursive(ctx, next_cluster, name, cluster_buffer, last_entry_name, last_entry_lfn, sfn_position, lfn_position);
-    }
-}
-
-static fat_directory_t* fat_find_entry(fat_context_t* ctx, uint32_t current_cluster, const char* name, void* cluster_buffer, uint64_t* sfn_position, uint64_t* lfn_position){
-    return fat_find_entry_recursive(ctx, current_cluster, name, cluster_buffer, NULL, false, sfn_position, lfn_position);
+    return NULL;
 }
 
 static fat_directory_t* fat_find_entry_with_path(fat_context_t* ctx, uint32_t current_cluster, const char* path, void* cluster_buffer, uint64_t* sfn_position, uint64_t* lfn_position){
@@ -459,7 +502,10 @@ int fat_mount(partition_t* partition){
     fat_file_internal_t* file = fat_open(ctx, "modules.cfg");
     char* buffer = "Hello world !!";
     size_t size = strlen(buffer);
-    fat_write(file, 0, size, &size, buffer, true);
+    for(int i = 0; i < 37; i++){
+        size_t size_tmp = 0;
+        fat_write(file, i * size, size, &size_tmp, buffer, true);
+    }
 
     return 0;
 }
