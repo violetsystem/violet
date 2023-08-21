@@ -2,6 +2,7 @@
 #define _MODULE_FAT32_CORE_H
 
 #include <errno.h>
+#include <lib/math.h>
 #include <lib/lock.h>
 #include <lib/memory.h>
 #include <lib/string.h>
@@ -14,6 +15,10 @@
 #define FSI_LEAD_SIGNATURE          (0x41615252)
 #define FSI_STRUCT_SIGNATURE        (0x61417272)
 #define FSI_TRAIL_SIGNATURE         (0xAA550000)
+
+#define LFN_NAME_SIZE               13
+
+#define LAST_LONG_ENTRY             0x40
 
 typedef struct{
     uint8_t jump[3];
@@ -86,7 +91,7 @@ typedef struct{
     uint8_t order;
     uint16_t name1[5];
     fat_attributes_t attributes;
-    uint8_t lfnType;
+    uint8_t type;
     uint8_t checksum;
     uint16_t name2[6];
     uint16_t reserved;
