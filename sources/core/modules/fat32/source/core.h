@@ -2,10 +2,14 @@
 #define _MODULE_FAT32_CORE_H
 
 #include <errno.h>
+#include <lib/lock.h>
 #include <lib/memory.h>
 #include <lib/string.h>
 
-#define ENTRY_SIZE 32
+#define ENTRY_SIZE                  (32)
+#define ENTRY_FIELD_OFFSET_SIZE     (28)
+
+#define END_OF_CLUSTERCHAIN         (0x0FFFFFFF)
 
 typedef struct{
     uint8_t jump[3];
@@ -38,6 +42,15 @@ typedef struct{
     uint8_t boot_code[420];
     uint16_t boot_signature;
 }__attribute__((packed)) bpb_t;
+
+typedef struct{
+    uint32_t fsi_signature;
+    uint8_t reserved1[400];
+    uint32_t struct_signature;
+    uint32_t free_cluster_count;
+    uint32_t next_free_cluster;
+    uint8_t reserved2[12];
+}__attribute__((packed)) fs_info_t;
 
 typedef struct{
     uint8_t readOnly:1;
@@ -84,10 +97,18 @@ typedef struct{
 
 typedef struct{
     bpb_t* bpb;
+    fs_info_t* fsi;
     uint32_t* fat;
+    uint64_t fat_size;
+    uint64_t fat1_position;
+    uint64_t fat2_position;
     uint64_t first_usable_lba;
     uint64_t cluster_size;
     uint64_t entries_per_cluster;
+    uint64_t cluster_count;
+    uint64_t data_cluster_count;
+    uint64_t fat_entry_count;
+    uint64_t next_free_cluster;
     partition_t* partition;
 } fat_context_t;
 

@@ -41,12 +41,60 @@ static int fat_read_boot_sector(fat_context_t* ctx){
     return read_partition(ctx->partition, 0, sizeof(bpb_t), ctx->bpb);
 }
 
-static int fat_read_fat(fat_context_t* ctx){
-    return read_partition(ctx->partition, lba_to_bytes(ctx->bpb->reserved_sectors), lba_to_bytes(ctx->bpb->sectors_per_fat), ctx->fat);
+static int fat_read_fs_info_sector(fat_context_t* ctx){
+    return read_partition(ctx->partition, lba_to_bytes(ctx->bpb->sector_number_fs_info), sizeof(fs_info_t), ctx->fsi);
 }
 
-static inline uint32_t fat_get_next_cluster_info(fat_context_t* ctx, uint32_t current){
-    return ctx->fat[current];
+static int fat_write_fs_info_sector(fat_context_t* ctx){
+    return write_partition(ctx->partition, lba_to_bytes(ctx->bpb->sector_number_fs_info), sizeof(fs_info_t), ctx->fsi);
+}
+
+static int fat_read_fat(fat_context_t* ctx){
+    return read_partition(ctx->partition, ctx->fat1_position, ctx->fat_size, ctx->fat);
+}
+
+static inline uint32_t fat_get_next_cluster(fat_context_t* ctx, uint32_t current){
+    return ctx->fat[current] & 0x0FFFFFFF;
+}
+
+static inline int fat_set_next_cluster(fat_context_t* ctx, uint32_t current, uint32_t next_cluster){
+    ctx->fat[current] = (next_cluster & 0x0FFFFFFF) | (ctx->fat[current] & 0xF0000000);
+    // write fat 1
+    write_partition(ctx->partition, (uint64_t)ctx->fat1_position + (uint64_t)current * (uint64_t)sizeof(uint32_t), sizeof(uint32_t), &ctx->fat[current]);
+    // write fat 2
+    write_partition(ctx->partition, (uint64_t)ctx->fat2_position + (uint64_t)current * (uint64_t)sizeof(uint32_t), sizeof(uint32_t), &ctx->fat[current]);
+    return 0;
+}
+
+static spinlock_t fat_allocate_cluster_lock = {};
+
+static int fat_allocate_cluster(fat_context_t* ctx, uint32_t* cluster){
+    spinlock_acquire(&fat_allocate_cluster_lock);
+    for(uint64_t i = ctx->next_free_cluster; i < ctx->fat_entry_count; i++){
+        if((fat_get_next_cluster(ctx, i)) == 0){
+            fat_set_next_cluster(ctx, i, END_OF_CLUSTERCHAIN);
+            ctx->next_free_cluster = i;
+            ctx->fsi->free_cluster_count++;
+            fat_write_fs_info_sector(ctx);
+            spinlock_release(&fat_allocate_cluster_lock);
+            *cluster = i;
+            return 0;
+        }
+    }
+    spinlock_release(&fat_allocate_cluster_lock);
+    return EINVAL;
+}
+
+static int fat_free_all_following_clusters(fat_context_t* ctx, uint32_t cluster){
+    uint32_t next_cluster = fat_get_next_cluster(ctx, cluster);
+    fat_set_next_cluster(ctx, cluster, 0);
+    ctx->fsi->free_cluster_count--;
+    fat_write_fs_info_sector(ctx);
+    if(next_cluster < 0x0FFFFFF8){
+        return fat_free_all_following_clusters(ctx, next_cluster);
+    }else{
+        return 0;
+    }
 }
 
 
@@ -58,10 +106,19 @@ static int fat_read_cluster(fat_context_t* ctx, uint32_t cluster, uint32_t align
     return ctx->partition->device->read(ctx->partition->device, start, size, buffer);
 }
 
+
+static int fat_write_cluster(fat_context_t* ctx, uint32_t cluster, uint32_t alignement, uint64_t size, void* buffer){
+    uint64_t start = ctx->partition->start + lba_to_bytes(cluster_to_lba(ctx, cluster)) + alignement;
+    if(start + size > ctx->partition->start + ctx->partition->size){
+        return EINVAL;
+    }
+    return ctx->partition->device->write(ctx->partition->device, start, size, buffer);
+}
+
 static int fat_get_cluster_chain_count(fat_context_t* ctx, uint32_t cluster){
     int i = 0;
-    while(cluster < 0xffffff8 && cluster != 0){
-        cluster = fat_get_next_cluster_info(ctx, cluster) & 0x0FFFFFFF;
+    while(cluster < 0xFFFFFF8 && cluster != 0){
+        cluster = fat_get_next_cluster(ctx, cluster);
         i++;
     }
     return i;
@@ -88,17 +145,63 @@ static int fat_read_cluster_chain(fat_context_t* ctx, uint32_t current_cluster, 
     *size_read += size_to_read;
     buffer_iteration += size_to_read;
 
-    uint32_t next_cluster = fat_get_next_cluster_info(ctx, current_cluster) & 0x0FFFFFFF;
-
-    if(next_cluster >= 0xffffff8 || next_cluster == 0){
-        return EINVAL; // this is still a success for the size store in size_read field
-    }
+    uint32_t next_cluster = fat_get_next_cluster(ctx, current_cluster);
 
     if(size > 0){
+        if(next_cluster >= 0xFFFFFF8 || next_cluster == 0){
+            return EINVAL; // this is still a success for the size store in size_read field
+        }
         return fat_read_cluster_chain(ctx, next_cluster, alignement, size, size_read, (void*)buffer_iteration);
     }else{
         return 0;
     }
+}
+
+static int fat_write_cluster_chain(fat_context_t* ctx, uint32_t current_cluster, uint32_t alignement, uint64_t size, uint64_t* size_write,  void* buffer, bool is_end_of_file){
+    uintptr_t buffer_iteration = (uintptr_t)buffer;
+    size_t size_to_write = 0;
+
+
+    if(alignement < ctx->cluster_size){
+        size_to_write = size;
+        if(alignement + size_to_write > ctx->cluster_size){
+            size_to_write = ctx->cluster_size - alignement;
+        }
+        assert(!fat_write_cluster(ctx, current_cluster, alignement, size_to_write, (void*)buffer_iteration));
+        alignement -= size_to_write;
+    }else{
+        alignement -= ctx->cluster_size;
+    }
+    
+
+    size -= size_to_write;
+    *size_write += size_to_write;
+    buffer_iteration += size_to_write;
+
+    uint32_t next_cluster = fat_get_next_cluster(ctx, current_cluster);
+
+    if(size > 0){
+        if(next_cluster >= 0xFFFFFF8 || next_cluster == 0){
+            if(fat_allocate_cluster(ctx, &next_cluster)){
+                return EIO;
+            }
+            fat_set_next_cluster(ctx, current_cluster, next_cluster);
+        }
+        return fat_write_cluster_chain(ctx, next_cluster, alignement, size, size_write, (void*)buffer_iteration, is_end_of_file);
+    }else{
+        if(!is_end_of_file || next_cluster >= 0xFFFFFF8 || next_cluster == 0){
+            return 0;
+        }
+
+        // we have to free every following clusters
+        fat_free_all_following_clusters(ctx, next_cluster);
+
+        // put the end of file after the current cluster
+        fat_set_next_cluster(ctx, current_cluster, END_OF_CLUSTERCHAIN);
+
+        return 0;
+    }
+
 }
 
 static bool fat_entry_valid(fat_directory_t* dir){
@@ -150,7 +253,7 @@ static int fat_read_entry(fat_context_t* ctx, uint32_t cluster, uint32_t entry_n
     return fat_read_cluster(ctx, cluster, entry_number * ENTRY_SIZE, ENTRY_SIZE, buffer);
 }
 
-static fat_directory_t* fat_find_entry_recursive(fat_context_t* ctx, uint32_t current_cluster, const char* name, void* cluster_buffer, char* last_entry_name, bool last_entry_lfn){
+static fat_directory_t* fat_find_entry_recursive(fat_context_t* ctx, uint32_t current_cluster, const char* name, void* cluster_buffer, char* last_entry_name, bool last_entry_lfn, uint64_t* sfn_position, uint64_t* lfn_position){
     /* read current cluster */
     assert(!fat_read_cluster(ctx, current_cluster, 0, ctx->cluster_size, (void*)cluster_buffer));
 
@@ -175,44 +278,50 @@ static fat_directory_t* fat_find_entry_recursive(fat_context_t* ctx, uint32_t cu
 
                 i += order - 1;
 
-                last_entry_lfn = true;
+                last_entry_lfn = lba_to_bytes(cluster_to_lba(ctx, current_cluster)) + i * ENTRY_SIZE;
 
                 continue;
             }else{
                 if(!last_entry_lfn){
                     fat_parse_sfn(last_entry_name, dir);
                 }else{
-                    last_entry_lfn = false;
+                    last_entry_lfn = 0;
                 }
             }
 
             if(!strcmp(name, last_entry_name)){
+                if(sfn_position != NULL){
+                    *sfn_position = lba_to_bytes(cluster_to_lba(ctx, current_cluster)) + i * ENTRY_SIZE;
+                }
+                if(lfn_position != NULL){
+                    *lfn_position = last_entry_lfn;
+                }
                 return dir;
             }
         }
     }
 
     /* find next cluster */
-    uint32_t next_cluster = fat_get_next_cluster_info(ctx, current_cluster) & 0x0FFFFFFF;
-    if(next_cluster >= 0xffffff8 || next_cluster == 0){
+    uint32_t next_cluster = fat_get_next_cluster(ctx, current_cluster);
+    if(next_cluster >= 0xFFFFFF8 || next_cluster == 0){
         return NULL;
     }else{
-        return fat_find_entry_recursive(ctx, next_cluster, name, cluster_buffer, last_entry_name, last_entry_lfn);
+        return fat_find_entry_recursive(ctx, next_cluster, name, cluster_buffer, last_entry_name, last_entry_lfn, sfn_position, lfn_position);
     }
 }
 
-static fat_directory_t* fat_find_entry(fat_context_t* ctx, uint32_t current_cluster, const char* name, void* cluster_buffer){
-    return fat_find_entry_recursive(ctx, current_cluster, name, cluster_buffer, NULL, false);
+static fat_directory_t* fat_find_entry(fat_context_t* ctx, uint32_t current_cluster, const char* name, void* cluster_buffer, uint64_t* sfn_position, uint64_t* lfn_position){
+    return fat_find_entry_recursive(ctx, current_cluster, name, cluster_buffer, NULL, false, sfn_position, lfn_position);
 }
 
-static fat_directory_t* fat_find_entry_with_path(fat_context_t* ctx, uint32_t current_cluster, const char* path, void* cluster_buffer){
+static fat_directory_t* fat_find_entry_with_path(fat_context_t* ctx, uint32_t current_cluster, const char* path, void* cluster_buffer, uint64_t* sfn_position, uint64_t* lfn_position){
     fat_directory_t* dir;
     char* entry_name = (char*)path;
     char* next_entry_name = strchr(entry_name, '/');
     while(next_entry_name != NULL){
         *next_entry_name = '\0';
 
-        dir = fat_find_entry(ctx, current_cluster, entry_name, cluster_buffer);
+        dir = fat_find_entry(ctx, current_cluster, entry_name, cluster_buffer, NULL, NULL);
         if(dir == NULL){
             return NULL;
         }
@@ -223,18 +332,18 @@ static fat_directory_t* fat_find_entry_with_path(fat_context_t* ctx, uint32_t cu
         next_entry_name = strchr(entry_name, '/');
     }
 
-    dir = fat_find_entry(ctx, current_cluster, entry_name, cluster_buffer);
+    dir = fat_find_entry(ctx, current_cluster, entry_name, cluster_buffer, sfn_position, lfn_position);
     return dir;
 }
 
-static fat_directory_t* fat_find_entry_with_path_from_root(fat_context_t* ctx, const char* path, void* cluster_buffer){
-    return fat_find_entry_with_path(ctx, ctx->bpb->root_cluster_number, path, cluster_buffer);
+static fat_directory_t* fat_find_entry_with_path_from_root(fat_context_t* ctx, const char* path, void* cluster_buffer, uint64_t* sfn_position, uint64_t* lfn_position){
+    return fat_find_entry_with_path(ctx, ctx->bpb->root_cluster_number, path, cluster_buffer, sfn_position, lfn_position);
 }
 
 fat_file_internal_t* fat_open(fat_context_t* ctx, const char* path){
     void* cluster_buffer = malloc(ctx->cluster_size);
     
-    fat_directory_t* dir = fat_find_entry_with_path_from_root(ctx, path, cluster_buffer);
+    fat_directory_t* dir = fat_find_entry_with_path_from_root(ctx, path, cluster_buffer, NULL, NULL);
     if(dir == NULL){
         free(cluster_buffer);
         return NULL;
@@ -260,6 +369,17 @@ fat_file_internal_t* fat_open(fat_context_t* ctx, const char* path){
     return file;
 }
 
+static int fat_update_file_size(fat_file_internal_t* file){
+    void* cluster_buffer = malloc(file->ctx->cluster_size);
+    uint64_t sfn_position;
+    fat_directory_t* dir = fat_find_entry_with_path_from_root(file->ctx, file->path, cluster_buffer, &sfn_position, NULL);
+    free(cluster_buffer);
+    if(dir == NULL){
+        return EINVAL;
+    }
+    return write_partition(file->ctx->partition, sfn_position + ENTRY_FIELD_OFFSET_SIZE, sizeof(uint32_t), &file->size);
+}
+
 int fat_read(fat_file_internal_t* file, uint64_t start, size_t size, size_t* size_read, void* buffer){
     uint64_t size_read_tmp = 0;
 
@@ -270,8 +390,20 @@ int fat_read(fat_file_internal_t* file, uint64_t start, size_t size, size_t* siz
     return err;
 }
 
-int fat_write(fat_file_internal_t* file, uint64_t start, size_t size, void* buffer){
-    return 0;
+int fat_write(fat_file_internal_t* file, uint64_t start, size_t size, size_t* size_write, void* buffer, bool is_end_of_file){
+    
+    uint64_t size_write_tmp = 0;
+
+    int err = fat_write_cluster_chain(file->ctx, file->cluster, start, (uint64_t)size, &size_write_tmp, buffer, is_end_of_file);
+
+    *size_write = (size_t)size_write_tmp;
+
+    if(is_end_of_file || start + *size_write > file->size){
+        file->size = start + *size_write;
+        fat_update_file_size(file);
+    }
+
+    return err;
 }
 
 int fat_mount(partition_t* partition){
@@ -286,6 +418,35 @@ int fat_mount(partition_t* partition){
         free(ctx);
         return EINVAL;
     }
+
+    ctx->fsi = malloc(sizeof(fs_info_t));
+    assert(!fat_read_fs_info_sector(ctx));
+
+
+    uint64_t total_sector = 0;
+    if(ctx->bpb->total_sectors16 != 0){
+        total_sector = ctx->bpb->total_sectors16;
+    }else{
+        total_sector = ctx->bpb->total_sectors32;
+    }
+
+    if(ctx->bpb->sectors_per_cluster){
+        ctx->cluster_count = total_sector / ctx->bpb->sectors_per_cluster;
+    }else{
+        ctx->cluster_count = total_sector;
+    }
+    ctx->data_cluster_count = total_sector - (ctx->bpb->root_cluster_number + (ctx->bpb->fats * ctx->bpb->sectors_per_fat));
+
+    if((uint64_t)ctx->fsi->next_free_cluster <= ctx->cluster_count){
+        ctx->next_free_cluster = (uint64_t)ctx->fsi->next_free_cluster;
+    }else{
+        ctx->next_free_cluster = 0;
+    }
+
+    ctx->fat_size = lba_to_bytes(ctx->bpb->sectors_per_fat);
+    ctx->fat1_position = lba_to_bytes(ctx->bpb->reserved_sectors);
+    ctx->fat2_position = ctx->fat1_position + ctx->fat_size;
+
     
     ctx->fat = malloc(lba_to_bytes(ctx->bpb->sectors_per_fat));
     assert(!fat_read_fat(ctx));
@@ -293,12 +454,12 @@ int fat_mount(partition_t* partition){
     ctx->first_usable_lba = ctx->bpb->reserved_sectors + ctx->bpb->fats * ctx->bpb->sectors_per_fat;
     ctx->cluster_size = lba_to_bytes(ctx->bpb->sectors_per_cluster);
     ctx->entries_per_cluster = lba_to_bytes(ctx->bpb->sectors_per_cluster) / ENTRY_SIZE;
+    ctx->fat_entry_count = lba_to_bytes(ctx->bpb->sectors_per_fat) / sizeof(uint32_t);
 
-    fat_file_internal_t* file = fat_open(ctx, "ahci.ksys");
-    size_t size_read;
-    void* buffer = malloc(1);
-    fat_read(file, 0x4E0, 1, &size_read, buffer);
-    log_printf("%x\n", *(uint8_t*)buffer);
+    fat_file_internal_t* file = fat_open(ctx, "modules.cfg");
+    char* buffer = "Hello world !!";
+    size_t size = strlen(buffer);
+    fat_write(file, 0, size, &size, buffer, true);
 
     return 0;
 }

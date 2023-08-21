@@ -12,7 +12,6 @@ info_system = /bin/echo -e "$(_PURPLE)[core/system]$(_END) $(_BOLD)$1$(_END)"
 # Limine AMD64 (liamd)
 
 liamd/build:
-	@ rm -rf liamd/
 	@ mkdir -m 777 -p liamd/sysroot
 	@ mkdir -m 777 -p liamd/flash/limine
 	@ cd $(SOURCES)/tools && bash build.sh
@@ -28,7 +27,7 @@ liamd/build:
 	@ cp limine.cfg $(EXTERN)/limine/limine-bios.sys $(EXTERN)/limine/limine-bios-cd.bin $(EXTERN)/limine/limine-uefi-cd.bin liamd/flash/limine
 	@ mkdir -p liamd/flash/EFI/BOOT
 	@ cp $(EXTERN)/limine/BOOTX64.EFI liamd/flash/EFI/BOOT/
-	@ bash liamd-disk.sh
+	@ bash boot-disk.sh liamd amd64 liamd/boot-violet.img
 
 	
 ovmf-amd64:
@@ -36,7 +35,7 @@ ovmf-amd64:
 
 LIAMD_QEMU_FLAGS = \
 	-bios $(EXTERN)/ovmf-amd64/OVMF.fd \
-	-drive file=liamd/boot-violet.hdd \
+	-drive file=liamd/boot-violet.img \
 	-machine q35 \
 	-m 2G \
 	-smp cores=4 \
