@@ -32,11 +32,25 @@ static inline uint64_t lba_to_bytes(uint64_t value){
     return value << 9;
 }
 
-static inline uint32_t fat_get_cluster_entry(fat_short_entry_t* dir){
+static inline uint32_t fat_get_cluster_entry_without_root_check(fat_short_entry_t* dir){
     return ((uint32_t)dir->cluster_low) | ((uint32_t)dir->cluster_high << 16);
 }
 
-static inline void fat_set_cluster_directory(fat_short_entry_t* dir, uint32_t cluster){
+static inline uint32_t fat_get_cluster_file(fat_short_entry_t* dir){
+    return fat_get_cluster_entry_without_root_check(dir);
+}
+
+static inline uint32_t fat_get_cluster_directory(fat_context_t* ctx, fat_short_entry_t* dir){
+    uint32_t cluster = fat_get_cluster_entry_without_root_check(dir);
+
+    if(cluster == 0){
+        cluster = ctx->bpb->root_cluster_number; // root directory
+    }
+
+    return cluster;
+}
+
+static inline void fat_set_cluster_entry(fat_short_entry_t* dir, uint32_t cluster){
     dir->cluster_low = cluster & 0xFFFF;
     dir->cluster_high = (cluster >> 16) & 0xFFFF;
 }
@@ -458,7 +472,7 @@ static size_t fat_get_dir_size(fat_context_t* ctx, fat_short_entry_t* dir, void*
     uint32_t entry_index = 0;
     uint32_t last_valid_index = 0;
 
-    uint32_t cluster_base = fat_get_cluster_entry(dir);
+    uint32_t cluster_base = fat_get_cluster_directory(ctx, dir);
     while((dir = fat_read_entry_with_cache(ctx, cluster_base, entry_index, cluster_buffer, &cluster_cache_id_count_from_base, &last_cluster_read)) != NULL){
         entry_index++;
         if(fat_entry_valid(dir)){
@@ -573,7 +587,7 @@ static fat_short_entry_t* fat_find_entry(fat_context_t* ctx, uint32_t current_cl
 static int fat_find_last_entry_info_with_path(fat_context_t* ctx, fat_short_entry_t* dir, const char* path, void* cluster_buffer, uint64_t* sfn_position, uint32_t* sfn_entry_index, uint32_t* lfn_first_entry_index){
     char* entry_name = (char*)path;
     char* next_entry_name = strchr(entry_name, '/');
-    uint32_t current_cluster = fat_get_cluster_entry(dir);
+    uint32_t current_cluster = fat_get_cluster_directory(ctx, dir);
     while(next_entry_name != NULL){
         *next_entry_name = '\0';
 
@@ -588,7 +602,7 @@ static int fat_find_last_entry_info_with_path(fat_context_t* ctx, fat_short_entr
             return ENOENT;
         }
 
-        current_cluster = fat_get_cluster_entry(dir);
+        current_cluster = fat_get_cluster_directory(ctx, dir);
 
         char* last_entry_name = next_entry_name + 1;
         next_entry_name = strchr(last_entry_name, '/');
@@ -605,7 +619,7 @@ static int fat_find_last_entry_info_with_path(fat_context_t* ctx, fat_short_entr
 static int fat_find_entry_info_with_path(fat_context_t* ctx, fat_short_entry_t* dir, const char* path, void* cluster_buffer, uint64_t* sfn_position, uint32_t* sfn_entry_index, uint32_t* lfn_first_entry_index){
     char* entry_name = (char*)path;
     char* next_entry_name = strchr(entry_name, '/');
-    uint32_t current_cluster = fat_get_cluster_entry(dir);
+    uint32_t current_cluster = fat_get_cluster_directory(ctx, dir);
     while(next_entry_name != NULL){
         *next_entry_name = '\0';
 
@@ -620,7 +634,7 @@ static int fat_find_entry_info_with_path(fat_context_t* ctx, fat_short_entry_t* 
             return ENOENT;
         }
 
-        current_cluster = fat_get_cluster_entry(dir);
+        current_cluster = fat_get_cluster_directory(ctx, dir);
 
         entry_name = next_entry_name + 1;
         next_entry_name = strchr(entry_name, '/');
@@ -632,7 +646,7 @@ static int fat_find_entry_info_with_path(fat_context_t* ctx, fat_short_entry_t* 
 static fat_short_entry_t* fat_find_last_directory(fat_context_t* ctx, fat_short_entry_t* dir, const char* path, void* cluster_buffer, char** entry_name_out){
     char* entry_name = (char*)path;
     char* next_entry_name = strchr(entry_name, '/');
-    uint32_t current_cluster = fat_get_cluster_entry(dir);
+    uint32_t current_cluster = fat_get_cluster_directory(ctx, dir);
     while(next_entry_name != NULL){
         *next_entry_name = '\0';
 
@@ -648,13 +662,13 @@ static fat_short_entry_t* fat_find_last_directory(fat_context_t* ctx, fat_short_
             return NULL;
         }
 
-        current_cluster = fat_get_cluster_entry(dir);
+        current_cluster = fat_get_cluster_directory(ctx, dir);
 
         entry_name = next_entry_name + 1;
         next_entry_name = strchr(entry_name, '/');
     }
 
-    if(entry_name != NULL){
+    if(entry_name_out != NULL){
         *entry_name_out = entry_name;
     }
 
@@ -667,7 +681,7 @@ static fat_short_entry_t* fat_find_entry_with_path(fat_context_t* ctx, fat_short
     if(dir == NULL){
         return NULL;
     }
-    uint32_t current_cluster = fat_get_cluster_entry(dir);
+    uint32_t current_cluster = fat_get_cluster_directory(ctx, dir);
     return fat_find_entry(ctx, current_cluster, entry_name, cluster_buffer);
 }
 
@@ -719,7 +733,7 @@ static int fat_add_entry_with_path(fat_context_t* ctx, fat_short_entry_t* dir, c
     memcpy(&dir_tmp, dir, sizeof(fat_short_entry_t));
     dir = &dir_tmp;
 
-    uint32_t base_cluster = fat_get_cluster_entry(dir);
+    uint32_t base_cluster = fat_get_cluster_directory(ctx, dir);
 
     assert(base_cluster != 0);
 
@@ -848,7 +862,7 @@ fat_file_internal_t* fat_open(fat_context_t* ctx, const char* path, int flags, m
 int fat_read(fat_file_internal_t* file, uint64_t start, size_t size, size_t* size_read, void* buffer){
     uint64_t size_read_tmp = 0;
 
-    uint32_t base_cluster = fat_get_cluster_entry(&file->entry);
+    uint32_t base_cluster = fat_get_cluster_file(&file->entry);
 
     if(base_cluster == 0){
         return EIO;
@@ -868,14 +882,14 @@ int fat_write(fat_file_internal_t* file, uint64_t start, size_t size, size_t* si
     
     uint64_t size_write_tmp = 0;
 
-    uint32_t base_cluster = fat_get_cluster_entry(&file->entry);
+    uint32_t base_cluster = fat_get_cluster_file(&file->entry);
 
     if(base_cluster == 0){
         // Allocate the first cluster of the entry
         if(fat_allocate_cluster(file->ctx, &base_cluster)){
             return EIO;
         }
-        fat_set_cluster_directory(&file->entry, base_cluster);
+        fat_set_cluster_entry(&file->entry, base_cluster);
     }
 
     int err = fat_write_cluster_chain(file->ctx, base_cluster, start, (uint64_t)size, &size_write_tmp, buffer, is_end_of_file ? WRITE_CLUSTER_CHAIN_FLAG_EOC : 0);
@@ -899,7 +913,6 @@ int fat_write(fat_file_internal_t* file, uint64_t start, size_t size, size_t* si
 /* directory */
 
 int fat_create_dir(fat_context_t* ctx, const char* path){
-
     fat_short_entry_t dir_entry = {};
     dir_entry.attributes.directory = true;
     dir_entry.creation_time = fat_get_current_time();
@@ -917,7 +930,7 @@ int fat_create_dir(fat_context_t* ctx, const char* path){
     /* clear cluster data */
     assert(!fat_write_cluster(ctx, base_cluster, 0, ctx->cluster_size, (void*)ctx->cluster_zero_buffer));
 
-    fat_set_cluster_directory(&dir_entry, base_cluster);
+    fat_set_cluster_entry(&dir_entry, base_cluster);
 
     void* cluster_buffer = malloc(ctx->cluster_size);
 
@@ -932,10 +945,17 @@ int fat_create_dir(fat_context_t* ctx, const char* path){
 
     fat_short_entry_t special_entry = dir_entry;
 
-    fat_set_cluster_directory(&special_entry, base_cluster);
+    fat_set_cluster_entry(&special_entry, base_cluster);
     assert(!fat_add_entry_with_path(ctx, &dir_entry, ".", &special_entry, false, cluster_buffer));
 
-    fat_set_cluster_directory(&special_entry, 0); // TODO
+    fat_short_entry_t* parent_dir = fat_find_last_directory(ctx, ctx->root_dir, path, cluster_buffer, NULL);
+    
+    uint32_t cluster_parent = fat_get_cluster_directory(ctx, parent_dir);
+    if(cluster_parent == ctx->bpb->root_cluster_number){
+        cluster_parent = 0; // starting cluster of the parent of this directory (which is 0 if this directories parent is the root directory)
+    }
+
+    fat_set_cluster_entry(&special_entry, cluster_parent);
     assert(!fat_add_entry_with_path(ctx, &dir_entry, "..", &special_entry, false, cluster_buffer));
 
 
@@ -996,11 +1016,11 @@ int fat_mount(partition_t* partition){
 
     ctx->root_dir = calloc(1, sizeof(fat_short_entry_t));
     ctx->root_dir->attributes.directory = true;
-    fat_set_cluster_directory(ctx->root_dir, ctx->bpb->root_cluster_number);
+    fat_set_cluster_entry(ctx->root_dir, ctx->bpb->root_cluster_number);
 
     fat_create_dir(ctx, "heyiamdir");
     int error;
-    fat_file_internal_t* file = fat_open(ctx, "heyiamdir/hello_world.txt", O_CREAT, 0, &error);
+    fat_file_internal_t* file = fat_open(ctx, "heyiamdir/./../hello_world0.txt", O_CREAT, 0, &error);
     assert(file != NULL);
     char* buffer = "hello world !!";
     size_t size = strlen(buffer);
