@@ -78,4 +78,4 @@ static inline char to_upper(char c){
     return c;
 }
 
-#endif
+#endif // _STRING_H

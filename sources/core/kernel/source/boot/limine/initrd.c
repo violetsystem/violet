@@ -25,7 +25,7 @@ static struct limine_file* initrd_get_file_ptr(const char* path){
     return NULL;
 }
 
-static vfs_t early_vfs_handler;
+static vfs_handler_t early_vfs_handler;
 
 void* initrd_get_file(const char* path){
     return (void*)initrd_get_file_ptr(path);
@@ -63,7 +63,7 @@ ssize_t initrd_get_file_size(void* file_ptr){
     return -EINVAL;
 }
 
-size_t initrd_read(void* buffer, size_t size, file_t* file){
+size_t initrd_read(void* buffer, size_t size, kernel_file_t* file){
     if(file == NULL){
         return 0;
     }
@@ -78,18 +78,18 @@ size_t initrd_read(void* buffer, size_t size, file_t* file){
     return size;
 }
 
-size_t initrd_write(void* buffer, size_t size, file_t* file){
+size_t initrd_write(void* buffer, size_t size, kernel_file_t* file){
     return 0;
 }
 
-int initrd_close(file_t* file){
+int initrd_close(kernel_file_t* file){
     return 0;
 }
 
-file_t* initrd_open(const char* path, int flags){
+kernel_file_t* initrd_open(const char* path, int flags){
     void* file_ptr = initrd_get_file(path);
     if(file_ptr != NULL){
-        file_t* file = (file_t*)malloc(sizeof(file_t));
+        kernel_file_t* file = (kernel_file_t*)malloc(sizeof(kernel_file_t));
         file->size = initrd_get_file_size(file_ptr);
         file->seek_position = 0;
         file->internal_data = file_ptr;

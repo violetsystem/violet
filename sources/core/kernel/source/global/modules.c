@@ -8,16 +8,17 @@
 #include <global/modules.h>
 #include <global/elf_loader.h>
 
-volatile vfs_t* vfs_handler = NULL;
-volatile pci_t* pci_handler = NULL;
-volatile storage_t* storage_handler = NULL;
+volatile vfs_handler_t* vfs_handler = NULL;
+volatile pci_handler_t* pci_handler = NULL;
+volatile time_handler_t* time_handler = NULL;
+volatile storage_handler_t* storage_handler = NULL;
 
 static module_flags_t modules_flags[MODULE_TYPE_COUNT];
 
 static const char* modules_cfg_path = "/modules.cfg";
 
 void modules_init(void){
-    file_t* file = open(modules_cfg_path, 0);
+    kernel_file_t* file = open(modules_cfg_path, 0);
     if(file != NULL){
         void* buffer = malloc(file->size);
         file->read(buffer, file->size, file);

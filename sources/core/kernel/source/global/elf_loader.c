@@ -24,7 +24,7 @@ static bool check_elf_signature(struct elf64_ehdr* header){
 static spinlock_t load_elf_module_lock;
 
 int load_elf_module(module_metadata_t** metadata, int argc, char* args[]){
-    file_t* file = open(args[0], 0);
+    kernel_file_t* file = open(args[0], 0);
 
     if(file == NULL){
         return ENOENT;

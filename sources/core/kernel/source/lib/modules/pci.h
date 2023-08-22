@@ -38,6 +38,6 @@ typedef struct{
     int (*unbind_msi)(pci_device_id_t, uint16_t); // arg 0: id | arg1: local device vector | return result
     int (*config_read_word)(pci_device_id_t, uint16_t, uint16_t*); // arg 0: id | arg1: offset | arg2: value pointer | return result
     int (*config_write_word)(pci_device_id_t, uint16_t, uint16_t); // arg 0: id | arg1: offset | arg2: value | return result
-} pci_t;
+} pci_handler_t;
 
 #endif // _MODULES_PCI_H

@@ -2,13 +2,14 @@
 #define _MODULE_FAT32_CORE_H
 
 #include <errno.h>
+#include <fcntl.h>
 #include <lib/math.h>
 #include <lib/lock.h>
+#include <lib/time.h>
 #include <lib/memory.h>
 #include <lib/string.h>
 
 #define ENTRY_SIZE                  (32)
-#define ENTRY_FIELD_OFFSET_SIZE     (28)
 
 #define END_OF_CLUSTERCHAIN         (0x0FFFFFFF)
 
@@ -19,6 +20,9 @@
 #define LFN_NAME_SIZE               13
 
 #define LAST_LONG_ENTRY             0x40
+
+#define WRITE_CLUSTER_CHAIN_FLAG_EOC    (1 << 0) // End of chain
+#define WRITE_CLUSTER_CHAIN_FLAG_FWZ    (1 << 1) // fill with zero : fill the last cluster with 0
 
 typedef struct{
     uint8_t jump[3];
@@ -85,7 +89,7 @@ typedef struct{
     uint16_t last_write_date;
     uint16_t cluster_low;
     uint32_t size;
-}__attribute__((packed)) fat_directory_t;
+}__attribute__((packed)) fat_short_entry_t;
 
 typedef struct{
     uint8_t order;
@@ -96,7 +100,7 @@ typedef struct{
     uint16_t name2[6];
     uint16_t reserved;
     uint16_t name3[2];
-}__attribute__((packed)) fat_lfn_t;
+}__attribute__((packed)) fat_long_entry_name_t;
 
 typedef struct{
     void* volume;
@@ -119,17 +123,13 @@ typedef struct{
     uint64_t data_cluster_count;
     uint64_t fat_entry_count;
     uint64_t next_free_cluster;
+    fat_short_entry_t* root_dir;
+    void* cluster_zero_buffer;
     partition_t* partition;
 } fat_context_t;
 
 typedef struct{
-    uint16_t creation_time;
-    uint16_t creation_date;
-    uint16_t last_access_date;
-    uint16_t last_write_time;
-    uint16_t last_write_date;
-    uint32_t cluster;
-    uint32_t size;
+    fat_short_entry_t entry;
     char* path;
     fat_context_t* ctx;
 } fat_file_internal_t;

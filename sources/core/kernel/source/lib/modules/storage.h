@@ -18,11 +18,11 @@ typedef struct {
     void* external_data; // reserved for storage handler
 } storage_potential_owner_t;
 
-typedef struct storage_t{
+typedef struct storage_handler_t{
     int (*add_storage_device)(storage_device_t*);
     int (*remove_storage_device)(storage_device_t*);
     int (*add_potential_owner)(storage_potential_owner_t*);
     int (*remove_potential_owner)(storage_potential_owner_t*);
-} storage_t;
+} storage_handler_t;
 
 #endif // _MODULES_VFS_H

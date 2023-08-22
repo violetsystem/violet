@@ -4,7 +4,7 @@
 #include <lib/modules/file.h>
 
 typedef struct{
-    file_t* (*open)(const char*, int);
-} vfs_t;
+    kernel_file_t* (*open)(const char*, int);
+} vfs_handler_t;
 
 #endif // _MODULES_VFS_H

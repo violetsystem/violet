@@ -244,7 +244,7 @@ void start_lapic_timer(void){
     local_apic_write_register(get_lapic_address(), local_apic_register_offset_divide, 4);        
     local_apic_write_register(get_lapic_address(), local_apic_register_offset_initial_count, 0xffffffff);
 
-    sleep(10);
+    kernel_sleep_ms(10);
     
     uint32_t tick10ms = 0xffffffff - local_apic_read_register(get_lapic_address(), local_apic_register_offset_curent_count);
 

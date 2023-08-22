@@ -2,7 +2,7 @@
 #include <global/modules.h>
 #include <lib/modules/pci.h>
 
-pci_t pci_internal_handler;
+pci_handler_t pci_internal_handler;
 
 size_t count_devices(pci_device_info_t* info){
     return device_search(pci_device_array, info->vendor_id, info->device_id, info->class_id, info->sub_class_id, info->prog_if);

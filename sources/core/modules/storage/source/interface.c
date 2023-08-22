@@ -3,7 +3,7 @@
 #include <lib/assert.h>
 #include <global/modules.h>
 
-storage_t storage_internal_handler;
+storage_handler_t storage_internal_handler;
 
 int add_storage_device(storage_device_t* device){
     if(device == NULL){

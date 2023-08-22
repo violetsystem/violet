@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <lib/modules/vfs.h>
 #include <lib/modules/pci.h>
+#include <lib/modules/time.h>
 #include <lib/modules/storage.h>
 
 #define MODULE_TYPE_UNDEFINE        (0)
@@ -26,9 +27,10 @@ typedef struct{
     char* name;
 } module_metadata_t;
 
-extern volatile vfs_t* vfs_handler;
-extern volatile pci_t* pci_handler;
-extern volatile storage_t* storage_handler;
+extern volatile vfs_handler_t* vfs_handler;
+extern volatile pci_handler_t* pci_handler;
+extern volatile time_handler_t* time_handler;
+extern volatile storage_handler_t* storage_handler;
 
 void modules_init(void);
 int modules_request_dependency(module_type_t type);

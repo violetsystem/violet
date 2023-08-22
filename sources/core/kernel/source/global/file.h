@@ -5,6 +5,6 @@
 #include <stddef.h>
 #include <lib/modules/file.h>
 
-file_t* open(const char* path, int flags);
+kernel_file_t* open(const char* path, int flags);
 
 #endif // _GLOBAL_FILE_H
