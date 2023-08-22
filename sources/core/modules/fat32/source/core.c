@@ -123,11 +123,20 @@ static int fat_allocate_cluster(fat_context_t* ctx, uint32_t* cluster){
     return EINVAL;
 }
 
-static int fat_free_all_following_clusters(fat_context_t* ctx, uint32_t cluster){
-    uint32_t next_cluster = fat_get_next_cluster(ctx, cluster);
+static int fat_free_cluster(fat_context_t* ctx, uint32_t cluster){
+    spinlock_acquire(&fat_allocate_cluster_lock);
     fat_set_next_cluster(ctx, cluster, 0);
     ctx->fsi->free_cluster_count++;
     fat_write_fs_info_sector(ctx);
+    spinlock_release(&fat_allocate_cluster_lock);
+    return 0;
+}
+
+static int fat_free_all_following_clusters(fat_context_t* ctx, uint32_t cluster){
+    uint32_t next_cluster = fat_get_next_cluster(ctx, cluster);
+
+    fat_free_cluster(ctx, cluster);
+
     if(next_cluster < 0x0FFFFFF8){
         return fat_free_all_following_clusters(ctx, next_cluster);
     }else{
@@ -264,7 +273,7 @@ static void fat_set_entry_as_lfn(fat_short_entry_t* dir){
 }
 
 static void fat_link_entry_to_lfn(fat_short_entry_t* dir){
-    *(uint8_t*)&dir->attributes = 0x20;
+    *(uint8_t*)&dir->attributes |= 0x20;
 }
 
 static int fat_parse_lfn(char* name, fat_long_entry_name_t* lfn){
@@ -367,6 +376,10 @@ static int fat_set_name_to_sfn(char* name, fat_short_entry_t* dir){
         if(over_size){
             dir->name[9] = '~';
             dir->name[10] = '1';
+        }else{
+            for(int i = name_len; i < 11; i++){
+                dir->name[i] = ' ';
+            }
         }
     }else{
         size_t name_len = 0;
@@ -388,6 +401,10 @@ static int fat_set_name_to_sfn(char* name, fat_short_entry_t* dir){
         if(over_size){
             dir->name[6] = '~';
             dir->name[7] = '1';
+        }else{
+            for(int i = name_len; i < 7; i++){
+                dir->name[i] = ' ';
+            }
         }
     }
     for(int i = 0; i < 11; i++){
@@ -688,7 +705,7 @@ static int fat_update_last_entry(fat_context_t* ctx, const char* path, fat_short
     return write_partition(ctx->partition, sfn_position, sizeof(fat_short_entry_t), dir);
 }
 
-static int fat_add_entry_with_path(fat_context_t* ctx, fat_short_entry_t* dir, const char* path, fat_short_entry_t* entry, void* cluster_buffer){
+static int fat_add_entry_with_path(fat_context_t* ctx, fat_short_entry_t* dir, const char* path, fat_short_entry_t* entry, bool use_lfn,void* cluster_buffer){
     char* entry_name;
 
     dir = fat_find_last_directory(ctx, dir, path, cluster_buffer, &entry_name);
@@ -713,7 +730,12 @@ static int fat_add_entry_with_path(fat_context_t* ctx, fat_short_entry_t* dir, c
 
     size_t dir_size = fat_get_dir_size(ctx, dir, cluster_buffer);
 
-    uint8_t lfn_entries_count = DIV_ROUNDUP(strlen(entry_name), LFN_NAME_SIZE);
+    uint8_t lfn_entries_count;
+    if(use_lfn){
+        lfn_entries_count = DIV_ROUNDUP(strlen(entry_name), LFN_NAME_SIZE);
+    }else{
+        lfn_entries_count = 0;
+    }
     size_t size_of_new_entry = ENTRY_SIZE * (1 + lfn_entries_count); // sizeof(sfn entry) + (sizeof(lfn entry) * lfn_entries_count)
     void* entry_buffer = malloc(size_of_new_entry);
 
@@ -723,16 +745,18 @@ static int fat_add_entry_with_path(fat_context_t* ctx, fat_short_entry_t* dir, c
     fat_link_entry_to_lfn(sfn);
     fat_set_name_to_sfn(entry_name, sfn);
 
-    uint8_t checksum = fat_get_lfn_check_sum((char*)sfn->name);
+    if(use_lfn){
+        uint8_t checksum = fat_get_lfn_check_sum((char*)sfn->name);
 
-    for(uint8_t i = 0; i < lfn_entries_count; i++){
-        fat_long_entry_name_t* lfn = (fat_long_entry_name_t*)((uintptr_t)entry_buffer + (uintptr_t)i * ENTRY_SIZE);
-        fat_set_entry_as_lfn((fat_short_entry_t*)lfn);
-        fat_set_name_to_lfn(&entry_name[LFN_NAME_SIZE * (lfn_entries_count - 1 - i)], lfn);
-        lfn->order = (lfn_entries_count - i) | ((i == 0) ? LAST_LONG_ENTRY : 0);
-        lfn->type = 0; 
-        lfn->reserved = 0; 
-        lfn->checksum = checksum; 
+        for(uint8_t i = 0; i < lfn_entries_count; i++){
+            fat_long_entry_name_t* lfn = (fat_long_entry_name_t*)((uintptr_t)entry_buffer + (uintptr_t)i * ENTRY_SIZE);
+            fat_set_entry_as_lfn((fat_short_entry_t*)lfn);
+            fat_set_name_to_lfn(&entry_name[LFN_NAME_SIZE * (lfn_entries_count - 1 - i)], lfn);
+            lfn->order = (lfn_entries_count - i) | ((i == 0) ? LAST_LONG_ENTRY : 0);
+            lfn->type = 0; 
+            lfn->reserved = 0; 
+            lfn->checksum = checksum; 
+        }
     }
 
 
@@ -744,8 +768,8 @@ static int fat_add_entry_with_path(fat_context_t* ctx, fat_short_entry_t* dir, c
     return 0;
 }
 
-static int fat_add_entry_with_path_from_root(fat_context_t* ctx, const char* path, fat_short_entry_t* entry, void* cluster_buffer){
-    return fat_add_entry_with_path(ctx, ctx->root_dir, path, entry, cluster_buffer);
+static int fat_add_entry_with_path_from_root(fat_context_t* ctx, const char* path, fat_short_entry_t* entry, bool use_lfn, void* cluster_buffer){
+    return fat_add_entry_with_path(ctx, ctx->root_dir, path, entry, use_lfn, cluster_buffer);
 }
 
 static int fat_remove_entry_with_path(fat_context_t* ctx, fat_short_entry_t* dir, const char* path, void* cluster_buffer){
@@ -759,6 +783,9 @@ static int fat_remove_entry_with_path_from_root(fat_context_t* ctx, const char* 
     return fat_remove_entry_with_path(ctx, ctx->root_dir, path, cluster_buffer);
 }
 
+
+/* file */
+
 static int fat_create_file(fat_context_t* ctx, const char* path, void* cluster_buffer){
     fat_short_entry_t file_entry = {};
     file_entry.creation_time = fat_get_current_time();
@@ -766,12 +793,8 @@ static int fat_create_file(fat_context_t* ctx, const char* path, void* cluster_b
     file_entry.last_access_date = fat_get_current_date();
     file_entry.last_write_time = fat_get_current_time();
     file_entry.last_write_date = fat_get_current_date();
-    int err = fat_add_entry_with_path_from_root(ctx, path, &file_entry, cluster_buffer);
-    if(err){
-        return err;
-    }
 
-    return 0;
+    return fat_add_entry_with_path_from_root(ctx, path, &file_entry, true, cluster_buffer);
 }
 
 static int fat_update_file_entry(fat_file_internal_t* file){
@@ -872,6 +895,55 @@ int fat_write(fat_file_internal_t* file, uint64_t start, size_t size, size_t* si
     return err;
 }
 
+
+/* directory */
+
+int fat_create_dir(fat_context_t* ctx, const char* path){
+
+    fat_short_entry_t dir_entry = {};
+    dir_entry.attributes.directory = true;
+    dir_entry.creation_time = fat_get_current_time();
+    dir_entry.creation_date = fat_get_current_date();
+    dir_entry.last_access_date = fat_get_current_date();
+    dir_entry.last_write_time = fat_get_current_time();
+    dir_entry.last_write_date = fat_get_current_date();
+
+    uint32_t base_cluster;
+
+    if(fat_allocate_cluster(ctx, &base_cluster)){
+        return ENOMEM;
+    }
+
+    /* clear cluster data */
+    assert(!fat_write_cluster(ctx, base_cluster, 0, ctx->cluster_size, (void*)ctx->cluster_zero_buffer));
+
+    fat_set_cluster_directory(&dir_entry, base_cluster);
+
+    void* cluster_buffer = malloc(ctx->cluster_size);
+
+    int err = fat_add_entry_with_path_from_root(ctx, path, &dir_entry, true, cluster_buffer);
+
+    if(err){
+        free(cluster_buffer);
+        fat_free_cluster(ctx, base_cluster);
+        return err;
+    }
+
+
+    fat_short_entry_t special_entry = dir_entry;
+
+    fat_set_cluster_directory(&special_entry, base_cluster);
+    assert(!fat_add_entry_with_path(ctx, &dir_entry, ".", &special_entry, false, cluster_buffer));
+
+    fat_set_cluster_directory(&special_entry, 0); // TODO
+    assert(!fat_add_entry_with_path(ctx, &dir_entry, "..", &special_entry, false, cluster_buffer));
+
+
+    free(cluster_buffer);
+
+    return 0;
+}
+
 int fat_mount(partition_t* partition){
     fat_context_t* ctx = malloc(sizeof(fat_context_t));
     ctx->partition = partition;
@@ -926,8 +998,9 @@ int fat_mount(partition_t* partition){
     ctx->root_dir->attributes.directory = true;
     fat_set_cluster_directory(ctx->root_dir, ctx->bpb->root_cluster_number);
 
+    fat_create_dir(ctx, "heyiamdir");
     int error;
-    fat_file_internal_t* file = fat_open(ctx, "EFI/hello_world.txt", O_CREAT, 0, &error);
+    fat_file_internal_t* file = fat_open(ctx, "heyiamdir/hello_world.txt", O_CREAT, 0, &error);
     assert(file != NULL);
     char* buffer = "hello world !!";
     size_t size = strlen(buffer);
@@ -936,6 +1009,7 @@ int fat_mount(partition_t* partition){
         size_t size_tmp = 0;
         fat_write(file, i * size, size, &size_tmp, buffer, true);
     }
+
 
     return 0;
 }
