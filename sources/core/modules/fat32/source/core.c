@@ -40,7 +40,7 @@ static inline uint32_t fat_get_cluster_file(fat_short_entry_t* dir){
     return fat_get_cluster_entry_without_root_check(dir);
 }
 
-static inline uint32_t fat_get_cluster_directory(fat_context_t* ctx, fat_short_entry_t* dir){
+static inline uint32_t fat_get_cluster_entry(fat_context_t* ctx, fat_short_entry_t* dir){
     uint32_t cluster = fat_get_cluster_entry_without_root_check(dir);
 
     if(cluster == 0){
@@ -221,6 +221,7 @@ static int fat_read_cluster_chain(fat_context_t* ctx, uint32_t current_cluster, 
 static int fat_write_cluster_chain(fat_context_t* ctx, uint32_t current_cluster, uint32_t alignement, uint64_t size, uint64_t* size_write,  void* buffer, uint8_t flags){    
     uintptr_t buffer_iteration = (uintptr_t)buffer;
     size_t size_to_write = 0;
+    uint64_t next_alignement;
 
 
     if(alignement < ctx->cluster_size){
@@ -231,12 +232,10 @@ static int fat_write_cluster_chain(fat_context_t* ctx, uint32_t current_cluster,
         if(size_to_write){
             assert(!fat_write_cluster(ctx, current_cluster, alignement, size_to_write, (void*)buffer_iteration));
         }
-        alignement = 0;
+        next_alignement = 0;
     }else{
-        alignement -= ctx->cluster_size;
+        next_alignement = alignement - ctx->cluster_size;
     }
-
-    
 
     size -= size_to_write;
     *size_write += size_to_write;
@@ -244,14 +243,14 @@ static int fat_write_cluster_chain(fat_context_t* ctx, uint32_t current_cluster,
 
     uint32_t next_cluster = fat_get_next_cluster(ctx, current_cluster);
 
-    if(size > 0){
+    if(size > 0 || next_alignement > 0){
         if(next_cluster >= 0xFFFFFF8 || next_cluster == 0){
             if(fat_allocate_cluster(ctx, &next_cluster)){
                 return EIO;
             }
             fat_set_next_cluster(ctx, current_cluster, next_cluster);
         }
-        return fat_write_cluster_chain(ctx, next_cluster, alignement, size, size_write, (void*)buffer_iteration, flags);
+        return fat_write_cluster_chain(ctx, next_cluster, next_alignement, size, size_write, (void*)buffer_iteration, flags);
     }else{
         if(flags & WRITE_CLUSTER_CHAIN_FLAG_FWZ){
             uint32_t fill_start = alignement + size_to_write;
@@ -472,7 +471,7 @@ static size_t fat_get_dir_size(fat_context_t* ctx, fat_short_entry_t* dir, void*
     uint32_t entry_index = 0;
     uint32_t last_valid_index = 0;
 
-    uint32_t cluster_base = fat_get_cluster_directory(ctx, dir);
+    uint32_t cluster_base = fat_get_cluster_entry(ctx, dir);
     while((dir = fat_read_entry_with_cache(ctx, cluster_base, entry_index, cluster_buffer, &cluster_cache_id_count_from_base, &last_cluster_read)) != NULL){
         entry_index++;
         if(fat_entry_valid(dir)){
@@ -515,6 +514,7 @@ static int fat_find_entry_info(fat_context_t* ctx, uint32_t current_cluster, con
             }else{
                 if(!is_last_entry_lfn){
                     fat_parse_sfn(entry_name, dir);
+                    last_entry_index_lfn = -1;
                 }else{
                     is_last_entry_lfn = false;
                 }
@@ -584,42 +584,10 @@ static fat_short_entry_t* fat_find_entry(fat_context_t* ctx, uint32_t current_cl
     return NULL;
 }
 
-static int fat_find_last_entry_info_with_path(fat_context_t* ctx, fat_short_entry_t* dir, const char* path, void* cluster_buffer, uint64_t* sfn_position, uint32_t* sfn_entry_index, uint32_t* lfn_first_entry_index){
-    char* entry_name = (char*)path;
-    char* next_entry_name = strchr(entry_name, '/');
-    uint32_t current_cluster = fat_get_cluster_directory(ctx, dir);
-    while(next_entry_name != NULL){
-        *next_entry_name = '\0';
-
-        dir = fat_find_entry(ctx, current_cluster, entry_name, cluster_buffer);
-
-        *next_entry_name = '/';
-
-        if(dir == NULL){
-            return ENOENT;
-        }
-        if(!dir->attributes.directory){
-            return ENOENT;
-        }
-
-        current_cluster = fat_get_cluster_directory(ctx, dir);
-
-        char* last_entry_name = next_entry_name + 1;
-        next_entry_name = strchr(last_entry_name, '/');
-
-        if(next_entry_name == NULL){
-            return fat_find_entry_info(ctx, current_cluster, entry_name, cluster_buffer, sfn_position, sfn_entry_index, lfn_first_entry_index);
-        }
-        entry_name = last_entry_name;
-    }
-
-    return ENOENT;
-}
-
 static int fat_find_entry_info_with_path(fat_context_t* ctx, fat_short_entry_t* dir, const char* path, void* cluster_buffer, uint64_t* sfn_position, uint32_t* sfn_entry_index, uint32_t* lfn_first_entry_index){
     char* entry_name = (char*)path;
     char* next_entry_name = strchr(entry_name, '/');
-    uint32_t current_cluster = fat_get_cluster_directory(ctx, dir);
+    uint32_t current_cluster = fat_get_cluster_entry(ctx, dir);
     while(next_entry_name != NULL){
         *next_entry_name = '\0';
 
@@ -634,7 +602,7 @@ static int fat_find_entry_info_with_path(fat_context_t* ctx, fat_short_entry_t* 
             return ENOENT;
         }
 
-        current_cluster = fat_get_cluster_directory(ctx, dir);
+        current_cluster = fat_get_cluster_entry(ctx, dir);
 
         entry_name = next_entry_name + 1;
         next_entry_name = strchr(entry_name, '/');
@@ -646,7 +614,7 @@ static int fat_find_entry_info_with_path(fat_context_t* ctx, fat_short_entry_t* 
 static fat_short_entry_t* fat_find_last_directory(fat_context_t* ctx, fat_short_entry_t* dir, const char* path, void* cluster_buffer, char** entry_name_out){
     char* entry_name = (char*)path;
     char* next_entry_name = strchr(entry_name, '/');
-    uint32_t current_cluster = fat_get_cluster_directory(ctx, dir);
+    uint32_t current_cluster = fat_get_cluster_entry(ctx, dir);
     while(next_entry_name != NULL){
         *next_entry_name = '\0';
 
@@ -662,7 +630,7 @@ static fat_short_entry_t* fat_find_last_directory(fat_context_t* ctx, fat_short_
             return NULL;
         }
 
-        current_cluster = fat_get_cluster_directory(ctx, dir);
+        current_cluster = fat_get_cluster_entry(ctx, dir);
 
         entry_name = next_entry_name + 1;
         next_entry_name = strchr(entry_name, '/');
@@ -681,16 +649,12 @@ static fat_short_entry_t* fat_find_entry_with_path(fat_context_t* ctx, fat_short
     if(dir == NULL){
         return NULL;
     }
-    uint32_t current_cluster = fat_get_cluster_directory(ctx, dir);
+    uint32_t current_cluster = fat_get_cluster_entry(ctx, dir);
     return fat_find_entry(ctx, current_cluster, entry_name, cluster_buffer);
 }
 
 static int fat_find_entry_info_with_path_from_root(fat_context_t* ctx, const char* path, void* cluster_buffer, uint64_t* sfn_position, uint32_t* sfn_entry_index, uint32_t* lfn_first_entry_index){
     return fat_find_entry_info_with_path(ctx, ctx->root_dir, path, cluster_buffer, sfn_position, sfn_entry_index, lfn_first_entry_index);
-}
-
-static int fat_find_last_entry_info_with_path_from_root(fat_context_t* ctx, const char* path, void* cluster_buffer, uint64_t* sfn_position, uint32_t* sfn_entry_index, uint32_t* lfn_first_entry_index){
-    return fat_find_last_entry_info_with_path(ctx, ctx->root_dir, path, cluster_buffer, sfn_position, sfn_entry_index, lfn_first_entry_index);
 }
 
 static fat_short_entry_t* fat_find_entry_with_path_from_root(fat_context_t* ctx, const char* path, void* cluster_buffer){
@@ -701,17 +665,6 @@ static int fat_update_entry(fat_context_t* ctx, const char* path, fat_short_entr
     void* cluster_buffer = malloc(ctx->cluster_size);
     uint64_t sfn_position;
     int err = fat_find_entry_info_with_path_from_root(ctx, path, cluster_buffer, &sfn_position, NULL, NULL);
-    free(cluster_buffer);
-    if(err){
-        return err;
-    }
-    return write_partition(ctx->partition, sfn_position, sizeof(fat_short_entry_t), dir);
-}
-
-static int fat_update_last_entry(fat_context_t* ctx, const char* path, fat_short_entry_t* dir){
-    void* cluster_buffer = malloc(ctx->cluster_size);
-    uint64_t sfn_position;
-    int err = fat_find_last_entry_info_with_path_from_root(ctx, path, cluster_buffer, &sfn_position, NULL, NULL);
     free(cluster_buffer);
     if(err){
         return err;
@@ -733,9 +686,7 @@ static int fat_add_entry_with_path(fat_context_t* ctx, fat_short_entry_t* dir, c
     memcpy(&dir_tmp, dir, sizeof(fat_short_entry_t));
     dir = &dir_tmp;
 
-    uint32_t base_cluster = fat_get_cluster_directory(ctx, dir);
-
-    assert(base_cluster != 0);
+    uint32_t base_cluster = fat_get_cluster_entry(ctx, dir);
 
     /* Check if the entry already exit */
     if(fat_find_entry(ctx, base_cluster, entry_name, cluster_buffer)){
@@ -776,8 +727,6 @@ static int fat_add_entry_with_path(fat_context_t* ctx, fat_short_entry_t* dir, c
 
     size_t size_write;
     fat_write_cluster_chain(ctx, base_cluster, dir_size, size_of_new_entry, &size_write, entry_buffer, WRITE_CLUSTER_CHAIN_FLAG_EOC);
-
-    fat_update_last_entry(ctx, path, dir);
     
     return 0;
 }
@@ -788,13 +737,75 @@ static int fat_add_entry_with_path_from_root(fat_context_t* ctx, const char* pat
 
 static int fat_remove_entry_with_path(fat_context_t* ctx, fat_short_entry_t* dir, const char* path, void* cluster_buffer){
     char* entry_name;
+
     dir = fat_find_last_directory(ctx, dir, path, cluster_buffer, &entry_name);
 
+    if(dir == NULL){
+        return ENOENT;
+    }
+
+    /* Remove dir from the cluster_buffer */
+    fat_short_entry_t dir_tmp;
+    memcpy(&dir_tmp, dir, sizeof(fat_short_entry_t));
+    dir = &dir_tmp;
+
+    uint32_t base_cluster = fat_get_cluster_entry(ctx, dir);
+
+    uint32_t sfn_index;
+    uint32_t lfn_index;
+
+    int err = fat_find_entry_info_with_path_from_root(ctx, path, cluster_buffer, NULL, &sfn_index, &lfn_index);
+
+    if(err){
+        return err;
+    }
+
+    uint32_t first_index_to_remove;
+    uint32_t first_index_to_move;
+
+    if(lfn_index != -1){
+        first_index_to_remove = lfn_index;
+        first_index_to_move = sfn_index + 1;
+    }else{
+        first_index_to_remove = sfn_index;
+        first_index_to_move = sfn_index + 1;
+    }
+
+    uint64_t alignement_source = first_index_to_move * ENTRY_SIZE;
+    uint64_t alignement_destination = first_index_to_remove * ENTRY_SIZE;
+    uint64_t size_to_copy = fat_get_dir_size(ctx, dir, cluster_buffer) - alignement_source;
+    void* buffer_to_copy = malloc(size_to_copy);
+
+    uint64_t size_read_tmp;
+    assert(!fat_read_cluster_chain(ctx, base_cluster, alignement_source, size_to_copy, &size_read_tmp, buffer_to_copy));
+    
+    uint64_t size_write_tmp;
+    assert(!fat_write_cluster_chain(ctx, base_cluster, alignement_destination, size_to_copy, &size_write_tmp, buffer_to_copy, WRITE_CLUSTER_CHAIN_FLAG_EOC | WRITE_CLUSTER_CHAIN_FLAG_FWZ));
     return 0;
 }
 
 static int fat_remove_entry_with_path_from_root(fat_context_t* ctx, const char* path, void* cluster_buffer){
     return fat_remove_entry_with_path(ctx, ctx->root_dir, path, cluster_buffer);
+}
+
+static int fat_clear_entry_data(fat_context_t* ctx, fat_short_entry_t* dir, void* cluster_buffer){
+    uint32_t base_cluster = fat_get_cluster_entry(ctx, dir);
+    fat_free_all_following_clusters(ctx, base_cluster);
+    return 0;
+}
+
+static int fat_clear_entry_data_with_path(fat_context_t* ctx, fat_short_entry_t* dir, const char* path, void* cluster_buffer){
+    dir = fat_find_entry_with_path(ctx, dir, path, cluster_buffer);
+    if(dir == NULL){
+        return ENOENT;
+    }
+    uint32_t base_cluster = fat_get_cluster_entry(ctx, dir);
+    fat_free_all_following_clusters(ctx, base_cluster);
+    return 0;
+}
+
+static int fat_clear_entry_data_with_path_from_root(fat_context_t* ctx, const char* path, void* cluster_buffer){
+    return fat_clear_entry_data_with_path(ctx, ctx->root_dir, path, cluster_buffer);
 }
 
 
@@ -950,7 +961,7 @@ int fat_create_dir(fat_context_t* ctx, const char* path){
 
     fat_short_entry_t* parent_dir = fat_find_last_directory(ctx, ctx->root_dir, path, cluster_buffer, NULL);
     
-    uint32_t cluster_parent = fat_get_cluster_directory(ctx, parent_dir);
+    uint32_t cluster_parent = fat_get_cluster_entry(ctx, parent_dir);
     if(cluster_parent == ctx->bpb->root_cluster_number){
         cluster_parent = 0; // starting cluster of the parent of this directory (which is 0 if this directories parent is the root directory)
     }
@@ -961,6 +972,43 @@ int fat_create_dir(fat_context_t* ctx, const char* path){
 
     free(cluster_buffer);
 
+    return 0;
+}
+
+int fat_remove_dir(fat_context_t* ctx, const char* path){
+    void* cluster_buffer = malloc(ctx->cluster_size);
+    char* entry_name;
+
+    fat_short_entry_t* dir_parent = fat_find_last_directory(ctx, ctx->root_dir, path, cluster_buffer, &entry_name);
+    
+    if(dir_parent == NULL){
+        free(cluster_buffer);
+        return ENOENT;
+    }
+
+    /* Remove dir from the cluster_buffer */
+    fat_short_entry_t dir_parent_tmp;
+    memcpy(&dir_parent_tmp, dir_parent, sizeof(fat_short_entry_t));
+    dir_parent = &dir_parent_tmp;
+
+
+    fat_short_entry_t* dir = fat_find_entry_with_path(ctx, dir_parent, entry_name, cluster_buffer);
+
+    if(dir == NULL){
+        free(cluster_buffer);
+        return ENOENT;
+    }
+
+    /* Remove dir from the cluster_buffer */
+    fat_short_entry_t dir_tmp;
+    memcpy(&dir_tmp, dir, sizeof(fat_short_entry_t));
+    dir = &dir_tmp;
+
+    fat_clear_entry_data(ctx, dir, cluster_buffer);
+
+    assert(!fat_remove_entry_with_path(ctx, dir_parent, entry_name, cluster_buffer));
+
+    free(cluster_buffer);
     return 0;
 }
 
@@ -1030,6 +1078,16 @@ int fat_mount(partition_t* partition){
         fat_write(file, i * size, size, &size_tmp, buffer, true);
     }
 
+    fat_create_dir(ctx, "test0");
+    fat_create_dir(ctx, "test1");
+    fat_create_dir(ctx, "test2");
+    fat_create_dir(ctx, "test3");
+    fat_create_dir(ctx, "test4");
+    fat_create_dir(ctx, "test5");
+    fat_remove_dir(ctx, "test1");
+
 
     return 0;
 }
+
+// TODO : need_lfn
