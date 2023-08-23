@@ -196,7 +196,7 @@ static int fat_read_cluster_chain(fat_context_t* ctx, uint32_t current_cluster, 
             size_to_read = ctx->cluster_size - alignement;
         }
         assert(!fat_read_cluster(ctx, current_cluster, alignement, size_to_read, (void*)buffer_iteration));
-        alignement -= size_to_read;
+        alignement = 0;
     }else{
         alignement -= ctx->cluster_size;
     }
@@ -809,7 +809,51 @@ static int fat_clear_entry_data_with_path_from_root(fat_context_t* ctx, const ch
 }
 
 
+static int fat_remove_and_clear_entry_with_path(fat_context_t* ctx, fat_short_entry_t* dir, const char* path, void* cluster_buffer){
+    char* entry_name;
+
+    fat_short_entry_t* dir_parent = fat_find_last_directory(ctx, dir, path, cluster_buffer, &entry_name);
+    
+    if(dir_parent == NULL){
+        free(cluster_buffer);
+        return ENOENT;
+    }
+
+    /* Remove dir from the cluster_buffer */
+    fat_short_entry_t dir_parent_tmp;
+    memcpy(&dir_parent_tmp, dir_parent, sizeof(fat_short_entry_t));
+    dir_parent = &dir_parent_tmp;
+
+
+    fat_short_entry_t* entry = fat_find_entry_with_path(ctx, dir_parent, entry_name, cluster_buffer);
+
+    if(entry == NULL){
+        free(cluster_buffer);
+        return ENOENT;
+    }
+
+    /* Remove dir from the cluster_buffer */
+    fat_short_entry_t dir_tmp;
+    memcpy(&dir_tmp, entry, sizeof(fat_short_entry_t));
+    entry = &dir_tmp;
+
+    fat_clear_entry_data(ctx, entry, cluster_buffer);
+
+    assert(!fat_remove_entry_with_path(ctx, dir_parent, entry_name, cluster_buffer));
+
+    return 0;
+}
+
+static int fat_remove_and_clear_entry_with_path_from_root(fat_context_t* ctx, const char* path, void* cluster_buffer){
+    return fat_remove_and_clear_entry_with_path(ctx, ctx->root_dir, path, cluster_buffer);
+}
+
+
 /* file */
+
+static int fat_update_file_entry(fat_file_internal_t* file){
+    return fat_update_entry(file->ctx, file->path, &file->entry);
+}
 
 static int fat_create_file(fat_context_t* ctx, const char* path, void* cluster_buffer){
     fat_short_entry_t file_entry = {};
@@ -822,8 +866,14 @@ static int fat_create_file(fat_context_t* ctx, const char* path, void* cluster_b
     return fat_add_entry_with_path_from_root(ctx, path, &file_entry, true, cluster_buffer);
 }
 
-static int fat_update_file_entry(fat_file_internal_t* file){
-    return fat_update_entry(file->ctx, file->path, &file->entry);
+int fat_remove_file(fat_context_t* ctx, const char* path){
+    void* cluster_buffer = malloc(ctx->cluster_size);
+
+    int err = fat_remove_and_clear_entry_with_path_from_root(ctx, path, cluster_buffer);
+
+    free(cluster_buffer);
+
+    return err;
 }
 
 fat_file_internal_t* fat_open(fat_context_t* ctx, const char* path, int flags, mode_t mode, int* error){
@@ -977,39 +1027,12 @@ int fat_create_dir(fat_context_t* ctx, const char* path){
 
 int fat_remove_dir(fat_context_t* ctx, const char* path){
     void* cluster_buffer = malloc(ctx->cluster_size);
-    char* entry_name;
 
-    fat_short_entry_t* dir_parent = fat_find_last_directory(ctx, ctx->root_dir, path, cluster_buffer, &entry_name);
-    
-    if(dir_parent == NULL){
-        free(cluster_buffer);
-        return ENOENT;
-    }
-
-    /* Remove dir from the cluster_buffer */
-    fat_short_entry_t dir_parent_tmp;
-    memcpy(&dir_parent_tmp, dir_parent, sizeof(fat_short_entry_t));
-    dir_parent = &dir_parent_tmp;
-
-
-    fat_short_entry_t* dir = fat_find_entry_with_path(ctx, dir_parent, entry_name, cluster_buffer);
-
-    if(dir == NULL){
-        free(cluster_buffer);
-        return ENOENT;
-    }
-
-    /* Remove dir from the cluster_buffer */
-    fat_short_entry_t dir_tmp;
-    memcpy(&dir_tmp, dir, sizeof(fat_short_entry_t));
-    dir = &dir_tmp;
-
-    fat_clear_entry_data(ctx, dir, cluster_buffer);
-
-    assert(!fat_remove_entry_with_path(ctx, dir_parent, entry_name, cluster_buffer));
+    int err = fat_remove_and_clear_entry_with_path_from_root(ctx, path, cluster_buffer);
 
     free(cluster_buffer);
-    return 0;
+
+    return err;
 }
 
 int fat_mount(partition_t* partition){
@@ -1080,12 +1103,13 @@ int fat_mount(partition_t* partition){
 
     fat_create_dir(ctx, "test0");
     fat_create_dir(ctx, "test1");
-    fat_create_dir(ctx, "test2");
+    // fat_create_dir(ctx, "test2");
     fat_create_dir(ctx, "test3");
     fat_create_dir(ctx, "test4");
     fat_create_dir(ctx, "test5");
-    fat_remove_dir(ctx, "test1");
+    fat_remove_dir(ctx, "test30");
 
+    fat_remove_file(ctx, "pci.ksys");
 
     return 0;
 }
