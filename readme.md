@@ -1,3 +1,3 @@
-# The Violet Project
+# The new Kot
 
 

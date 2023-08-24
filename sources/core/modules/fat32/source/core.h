@@ -21,8 +21,12 @@
 
 #define LAST_LONG_ENTRY             0x40
 
+#define DIR_MINIMUM_ENTRIES         2
+#define DIR_MINIMUM_SIZE            ENTRY_SIZE * DIR_MINIMUM_ENTRIES
+
 #define WRITE_CLUSTER_CHAIN_FLAG_EOC    (1 << 0) // End of chain
 #define WRITE_CLUSTER_CHAIN_FLAG_FWZ    (1 << 1) // fill with zero : fill the last cluster with 0
+
 
 typedef struct{
     uint8_t jump[3];

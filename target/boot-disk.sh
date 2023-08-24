@@ -29,21 +29,21 @@ if [[ $TARGET_NAME == li* ]]; then
 fi
 
 # Mount the partition
-mkdir -p ${TARGET_NAME}/boot_disk_violet_mount
-sudo mount ${LOOPBACK}p1 ${TARGET_NAME}/boot_disk_violet_mount
+mkdir -p ${TARGET_NAME}/boot_disk_kot_mount
+sudo mount ${LOOPBACK}p1 ${TARGET_NAME}/boot_disk_kot_mount
 
 # Copy necessary files
-sudo mkdir -p ${TARGET_NAME}/boot_disk_violet_mount/EFI/BOOT
-sudo cp -r ${TARGET_NAME}/flash/. ${TARGET_NAME}/boot_disk_violet_mount/.
+sudo mkdir -p ${TARGET_NAME}/boot_disk_kot_mount/EFI/BOOT
+sudo cp -r ${TARGET_NAME}/flash/. ${TARGET_NAME}/boot_disk_kot_mount/.
 
 # Sync data
 sync
 
 # Unmount the partition
-sudo umount ${TARGET_NAME}/boot_disk_violet_mount
+sudo umount ${TARGET_NAME}/boot_disk_kot_mount
 
 # Release loopback device
 sudo losetup -d ${LOOPBACK}
 
 # Remove mount folder
-sudo rm -rf ${TARGET_NAME}/boot_disk_violet_mount
+sudo rm -rf ${TARGET_NAME}/boot_disk_kot_mount

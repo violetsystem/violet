@@ -27,7 +27,7 @@ liamd/build:
 	@ cp limine.cfg $(EXTERN)/limine/limine-bios.sys $(EXTERN)/limine/limine-bios-cd.bin $(EXTERN)/limine/limine-uefi-cd.bin liamd/flash/limine
 	@ mkdir -p liamd/flash/EFI/BOOT
 	@ cp $(EXTERN)/limine/BOOTX64.EFI liamd/flash/EFI/BOOT/
-	@ bash boot-disk.sh liamd amd64 liamd/boot-violet.img
+	@ bash boot-disk.sh liamd amd64 liamd/boot-kot.img
 
 	
 ovmf-amd64:
@@ -35,7 +35,7 @@ ovmf-amd64:
 
 LIAMD_QEMU_FLAGS = \
 	-bios $(EXTERN)/ovmf-amd64/OVMF.fd \
-	-drive file=liamd/boot-violet.img \
+	-drive file=liamd/boot-kot.img \
 	-machine q35 \
 	-m 2G \
 	-smp cores=4 \
@@ -68,15 +68,15 @@ liarm/build:
 		-no-emul-boot -boot-load-size 4 -boot-info-table \
 		--efi-boot limine/limine-uefi-cd.bin \
 		-efi-boot-part --efi-boot-image --protective-msdos-label \
-		liarm/flash/ -o liarm/boot-violet.iso
-	@ $(EXTERN)/limine/limine bios-install liarm/boot-violet.iso
+		liarm/flash/ -o liarm/boot-kot.iso
+	@ $(EXTERN)/limine/limine bios-install liarm/boot-kot.iso
 
 ovmf-aarch64:
 	@ make -C "$(EXTERN)" ovmf-aarch64
 
 LIARM_QEMU_FLAGS = \
 	-bios $(EXTERN)/ovmf-aarch64/OVMF.fd \
-	-cdrom liarm/boot-violet.iso \
+	-cdrom liarm/boot-kot.iso \
 	-cpu cortex-a72 \
 	-machine virt \
 	-m 2G \

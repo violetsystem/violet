@@ -62,6 +62,19 @@ static inline char* strchr(const char* p, int ch){
     return NULL;
 }
 
+static inline char* strrchr(const char* p, int ch){
+    const char* last_occurrence = NULL;
+
+    while(*p){
+        if(*p == ch){
+            last_occurrence = p;
+        }
+        p++;
+    }
+
+    return (char*)last_occurrence;
+}
+
 static inline char to_lower(char c){
     if(c >= 'A' && c <= 'Z'){
         return c + 32;
